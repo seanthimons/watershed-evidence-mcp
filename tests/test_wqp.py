@@ -24,11 +24,17 @@ def test_result_parameters_are_bounded_and_preserve_exact_characteristic() -> No
     assert params["startDateHi"] == "12-31-2024"
     assert params["sampleMedia"] == "Water"
     assert params["mimeType"] == "csv"
+    assert params["resultLimit"] == "1000"
 
 
 def test_scope_rejects_unbounded_result_query() -> None:
     with pytest.raises(ValueError, match="exactly one"):
         QueryScope()
+
+
+def test_scope_rejects_empty_station_selection() -> None:
+    with pytest.raises(ValueError, match="at least 1"):
+        QueryScope(station_ids=[])
 
 
 def test_normalization_preserves_interpretation_fields() -> None:
@@ -40,10 +46,11 @@ def test_normalization_preserves_interpretation_fields() -> None:
         "ResultMeasureValue": "485",
         "ResultMeasure/MeasureUnitCode": "uS/cm",
         "ResultValueTypeName": "Actual",
+        "MeasureQualifierCode": "<",
         "ResultDetectionConditionText": "Present Above Quantification Limit",
         "DetectionQuantitationLimitMeasure/MeasureValue": "1",
         "DetectionQuantitationLimitMeasure/MeasureUnitCode": "uS/cm",
-        "AnalyticalMethod/MethodIdentifier": "2510 B",
+        "ResultAnalyticalMethod/MethodIdentifier": "2510 B",
         "LaboratoryName": "Example Laboratory",
     }
 
@@ -52,5 +59,6 @@ def test_normalization_preserves_interpretation_fields() -> None:
     assert normalized["station_id"] == "USGS-03240000"
     assert normalized["value"] == "485"
     assert normalized["unit"] == "uS/cm"
-    assert normalized["qualifier"] == "Present Above Quantification Limit"
+    assert normalized["qualifier"] == "<"
+    assert normalized["detection_condition"] == "Present Above Quantification Limit"
     assert normalized["method_identifier"] == "2510 B"

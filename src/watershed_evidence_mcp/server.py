@@ -132,14 +132,24 @@ async def wqp_monitoring_sites(scope: QueryScope) -> dict:
 )
 async def wqp_measurements(query: WqpQuery) -> dict:
     """Retrieve and normalize a capped raw WQP result set."""
-    rows, query_url = await WqpAdapter().measurements(query)
+    result = await WqpAdapter().measurements(query)
     return {
         "evidence_type": "observation",
-        "returned_records": len(rows),
+        "returned_records": len(result.records),
         "result_limit": query.result_limit,
-        "records": rows,
+        "truncated": result.truncated,
+        "continuation": result.continuation,
+        "cache": {
+            "hit": result.cache_hit,
+            "retrieved_at": result.retrieved_at.isoformat(),
+            "ttl_seconds": 3_600,
+            "invalidation": (
+                "entries expire after TTL; a source-version change uses a new cache key"
+            ),
+        },
+        "records": result.records,
         "provenance": _provenance(
-            "Water Quality Portal", "WQX 2 public web services", query_url, WQP_CAVEAT
+            "Water Quality Portal", result.source_version, result.query_url, WQP_CAVEAT
         ),
     }
 

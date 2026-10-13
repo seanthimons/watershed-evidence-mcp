@@ -15,7 +15,11 @@ Tools represent a domain action an agent can select correctly, rather than a thi
 
 ## Query policy
 
-`wqp_measurements` needs one exact geographic/station selector, at least one exact WQP characteristic, and an inclusive date range. Results are bounded by `result_limit`. The WQP availability summary is the intended preflight tool.
+`wqp_measurements` needs one exact geographic/station selector, at least one exact WQP characteristic, and an inclusive date range. Results are bounded by `result_limit`; a cap-reached result is explicitly marked `truncated` and instructs the caller to narrow dates, station IDs, or characteristics for a separate bounded slice. The WQP availability summary is the intended preflight tool.
+
+## Cache and transport policy
+
+Measurement responses are stored in a local DuckDB cache. The key is a SHA-256 digest of canonicalized source, source version, endpoint, and query parameters. Entries expire after one hour and are removed during lookup; source-version changes necessarily produce distinct keys. Responses retain their original retrieval time and cache-hit status. HTTP calls have a 20-second timeout, a 10 MB body limit, and content-type validation before parsing.
 
 ## Evidence labels
 
@@ -26,4 +30,4 @@ Tools represent a domain action an agent can select correctly, rather than a thi
 
 ## Compatibility
 
-WQP legacy WQX 2 endpoints are the default. WQX 3 is isolated behind configuration in a later slice because its schema transition remains active.
+WQP legacy WQX 2 endpoints are the default. `compatibility_mode="wqx3"` is an explicit adapter boundary but fails safely until the active WQX 3 schema is validated against the provenance-preserving result contract; it never silently falls back to WQX 2.

@@ -3,21 +3,55 @@
 from __future__ import annotations
 
 import csv
+import os
 from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import datetime
 from io import StringIO
+from pathlib import Path
 from urllib.parse import urlencode
 
-from watershed_evidence_mcp.http import JsonHttpClient
+from watershed_evidence_mcp.cache import DuckDbCache
+from watershed_evidence_mcp.http import JsonHttpClient, UpstreamServiceError
 from watershed_evidence_mcp.models import QueryScope, WqpQuery
 
 WQP_BASE_URL = "https://www.waterqualitydata.us/data"
+WQP_SOURCE = "Water Quality Portal"
+WQX2_VERSION = "WQX 2 public web services"
+REQUIRED_RESULT_COLUMNS = {"MonitoringLocationIdentifier", "CharacteristicName"}
+CACHE_PATH = (
+    Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    / "watershed-evidence-mcp"
+    / "wqp.duckdb"
+)
+
+
+@dataclass(frozen=True)
+class MeasurementResult:
+    records: list[dict[str, str | None]]
+    query_url: str
+    source_version: str
+    retrieved_at: datetime
+    cache_hit: bool
+    truncated: bool
+    continuation: str | None
 
 
 class WqpAdapter:
-    """Build bounded WQP requests and retain a transparent query URL."""
+    """Build bounded WQP requests and retain transparent provenance metadata."""
 
-    def __init__(self, client: JsonHttpClient | None = None) -> None:
+    def __init__(
+        self, client: JsonHttpClient | None = None, cache: DuckDbCache | None = None
+    ) -> None:
         self.client = client or JsonHttpClient()
+        self._cache = cache
+
+    @property
+    def cache(self) -> DuckDbCache:
+        """Create persistent state only for a measurement retrieval."""
+        if self._cache is None:
+            self._cache = DuckDbCache(CACHE_PATH)
+        return self._cache
 
     @staticmethod
     def _scope_parameters(scope: QueryScope) -> dict[str, str]:
@@ -47,6 +81,7 @@ class WqpAdapter:
                 "mimeType": "csv",
                 "zip": "no",
                 "sorted": "no",
+                "resultLimit": str(query.result_limit),
             }
         )
         return parameters
@@ -67,6 +102,15 @@ class WqpAdapter:
     def url(path: str, params: Mapping[str, str]) -> str:
         return f"{WQP_BASE_URL}/{path}?{urlencode(params)}"
 
+    @staticmethod
+    def _version_for(query: WqpQuery) -> str:
+        if query.compatibility_mode == "wqx2":
+            return WQX2_VERSION
+        raise UpstreamServiceError(
+            "WQX 3 compatibility mode is not enabled: its result schema has not been validated "
+            "against this provenance-preserving adapter. Use compatibility_mode='wqx2'."
+        )
+
     async def available_data(self, scope: QueryScope) -> tuple[dict, str]:
         params = self.summary_parameters(scope)
         url = f"{WQP_BASE_URL}/summary/monitoringLocation/search"
@@ -78,14 +122,79 @@ class WqpAdapter:
         url = f"{WQP_BASE_URL}/Station/search"
         return await self.client.get_json(url, params), self.url("Station/search", params)
 
-    async def measurements(self, query: WqpQuery) -> tuple[list[dict[str, str | None]], str]:
+    async def measurements(self, query: WqpQuery) -> MeasurementResult:
+        source_version = self._version_for(query)
         params = self.result_parameters(query)
-        url = f"{WQP_BASE_URL}/Result/search"
-        text = await self.client.get_text(url, params)
-        rows = list(csv.DictReader(StringIO(text)))
-        if len(rows) > query.result_limit:
-            rows = rows[: query.result_limit]
-        return [normalize_result_row(row) for row in rows], self.url("Result/search", params)
+        endpoint = "Result/search"
+        query_url = self.url(endpoint, params)
+        cache_key = self.cache.key_for(
+            source=WQP_SOURCE,
+            source_version=source_version,
+            endpoint=endpoint,
+            parameters=params,
+        )
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return self._measurement_result(
+                cached.payload, query_url, source_version, cached.retrieved_at, cache_hit=True
+            )
+
+        url = f"{WQP_BASE_URL}/{endpoint}"
+        text = await self.client.get_text(
+            url,
+            params,
+            expected_content_types=("text/csv", "application/csv", "text/plain"),
+        )
+        reader = csv.DictReader(StringIO(text))
+        if reader.fieldnames is None or not REQUIRED_RESULT_COLUMNS.issubset(reader.fieldnames):
+            raise UpstreamServiceError(
+                "WQP returned CSV without required identifier/characteristic columns; retry later"
+            )
+        rows = list(reader)
+        if any(
+            not row.get("MonitoringLocationIdentifier") or not row.get("CharacteristicName")
+            for row in rows
+        ):
+            raise UpstreamServiceError(
+                "WQP returned a CSV row without a monitoring-location identifier or "
+                "characteristic; retry later"
+            )
+        normalized = [normalize_result_row(row) for row in rows[: query.result_limit]]
+        payload = {
+            "records": normalized,
+            "truncated": len(rows) >= query.result_limit,
+        }
+        entry = self.cache.set(cache_key, payload)
+        return self._measurement_result(
+            payload, query_url, source_version, entry.retrieved_at, cache_hit=False
+        )
+
+    @staticmethod
+    def _measurement_result(
+        payload: dict,
+        query_url: str,
+        source_version: str,
+        retrieved_at: datetime,
+        *,
+        cache_hit: bool,
+    ) -> MeasurementResult:
+        truncated = bool(payload["truncated"])
+        continuation = None
+        if truncated:
+            continuation = (
+                "This response reached the requested result_limit and may be incomplete. WQX 2 "
+                "does not provide a stable result cursor here; narrow the date range, station IDs, "
+                "or characteristic selection before requesting the next bounded slice."
+            )
+        return MeasurementResult(
+            records=payload["records"],
+            query_url=query_url,
+            source_version=source_version,
+            retrieved_at=retrieved_at,
+            cache_hit=cache_hit,
+            truncated=truncated,
+            continuation=continuation,
+        )
 
 
 def normalize_result_row(row: Mapping[str, str]) -> dict[str, str | None]:
@@ -103,9 +212,12 @@ def normalize_result_row(row: Mapping[str, str]) -> dict[str, str | None]:
         "value": value("ResultMeasureValue", "ResultValue"),
         "unit": value("ResultMeasure/MeasureUnitCode", "ResultMeasure.MeasureUnitCode"),
         "value_type": value("ResultValueTypeName"),
-        "qualifier": value("ResultDetectionConditionText", "ResultQualifier"),
+        "qualifier": value("MeasureQualifierCode", "ResultQualifier"),
+        "detection_condition": value("ResultDetectionConditionText"),
         "detection_limit_value": value("DetectionQuantitationLimitMeasure/MeasureValue"),
         "detection_limit_unit": value("DetectionQuantitationLimitMeasure/MeasureUnitCode"),
-        "method_identifier": value("AnalyticalMethod/MethodIdentifier"),
+        "method_identifier": value(
+            "ResultAnalyticalMethod/MethodIdentifier", "AnalyticalMethod/MethodIdentifier"
+        ),
         "laboratory_name": value("LaboratoryName"),
     }

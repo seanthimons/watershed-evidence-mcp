@@ -64,7 +64,7 @@ class WaterbodyResolution(BaseModel):
 class QueryScope(BaseModel):
     """Exactly one bounded WQP geographic selector or explicit station IDs."""
 
-    station_ids: list[str] | None = Field(default=None, max_length=100)
+    station_ids: list[str] | None = Field(default=None, min_length=1, max_length=100)
     bounding_box: BoundingBox | None = None
     point_radius: PointRadius | None = None
     huc8: Annotated[str | None, Field(pattern=r"^\d{8}$")] = None
@@ -86,6 +86,7 @@ class WqpQuery(BaseModel):
     end_date: date
     sample_media: Literal["Water", "Sediment", "Biological", "Soil", "Tissue", "Other"] = "Water"
     result_limit: Annotated[int, Field(ge=1, le=10_000)] = 1_000
+    compatibility_mode: Literal["wqx2", "wqx3"] = "wqx2"
 
     @model_validator(mode="after")
     def valid_dates(self) -> WqpQuery:

@@ -24,6 +24,19 @@ For each live scenario record:
 - successful structured response / expected validation error
 - provenance completeness: source, query URL, timestamp, and caveat all present
 
+## Hardened-retrieval verified run
+
+Run from the repository with Python 3.11.15 on 2026-10-13 EDT. These are direct live-service results from the hardened WQX 2 adapter, not fixtures.
+
+| Scenario | Input | Result | Wall-clock |
+| --- | --- | --- | --- |
+| WQP availability summary | `USGS-03246200` | 1 GeoJSON feature | 0.15 s |
+| WQP station inventory | `USGS-03246200` | 1 GeoJSON feature | 0.09 s |
+| WQP measurement retrieval | `USGS-03246200`, `Specific conductance`, 1970-01-01 through 1980-01-01, 25-record cap | 25 normalized raw observations; `truncated: true` because the cap was reached | 0.21 s |
+| Repeated identical measurement request | Same normalized request | 25 records from DuckDB cache; original retrieval timestamp preserved; `cache.hit: true` | 0.03 s |
+
+The summary and station services returned `application/vnd.geo+json`; this is now an accepted, explicitly tested GeoJSON media type. The CSV result endpoint returned `text/csv`. No response crossed the 10 MB safety limit.
+
 ## Initial verified run
 
 Run from the repository with Python 3.11.15 on 2026-10-13 EDT. The program output and request URLs were retained in the implementation session; values below are direct live-service results, not fixtures.

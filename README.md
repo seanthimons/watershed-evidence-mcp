@@ -50,7 +50,10 @@ Use an MCP client configured for stdio, for example:
 - It never labels a screening baseline as a regulatory conclusion.
 - It does not infer a river corridor from a name alone: `resolve_waterbody` returns candidates and the caller must choose one.
 - It preserves original identifiers, units, qualifiers, and source fields.
-- It caps/paginates results rather than silently initiating an unrestricted national download.
+- `wqp_measurements` uses a local DuckDB cache keyed by normalized parameters, endpoint, source, and source version. Entries have a one-hour TTL; expired entries are deleted on lookup, and a source-version change creates a distinct cache key.
+- It caps results and labels every cap-reached response `truncated: true`; WQX 2 results have no stable cursor here, so the continuation strategy is to narrow date range, station IDs, or characteristics before requesting the next slice.
+- Upstream requests use a 20-second timeout, a 10 MB response limit, and expected-content-type checks. Service failures name the safe corrective action without exposing a traceback.
+- WQX 2 is the default compatibility mode. `compatibility_mode="wqx3"` is explicit but currently rejected pending schema validation, rather than silently routing through a legacy parser.
 
 ## Official sources
 
