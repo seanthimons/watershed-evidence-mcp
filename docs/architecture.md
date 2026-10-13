@@ -20,7 +20,7 @@ Tools represent a domain action an agent can select correctly, rather than a thi
 
 ## ATTAINS policy
 
-`get_assessment_context` requires exactly one `assessment_unit_id` or `huc12`. A HUC12 is a disclosed resolution step: the adapter gets the HUC12 summary, takes its associated assessment-unit IDs, then requests their assessment records. It fails rather than silently truncating a HUC12 that resolves to more than 50 units. ATTAINS now requires a free Data.gov API key supplied only through `ATTAINS_API_KEY`; the adapter sends it in the documented `X-Api-Key` header and provenance URLs deliberately omit it. Assessment output is labelled `assessment_context`: a reporting-cycle finding, not a current-condition measurement or causal conclusion.
+`get_assessment_context` requires exactly one `assessment_unit_id` or `huc12`. The adapter first resolves assessment-unit identifiers through ATTAINS's `assessmentUnits` service, which authoritatively provides organization IDs; it then retrieves assessments per organization. This prevents unverified state-prefix inference and supports HUC12s that cross state or tribal-organization boundaries while retaining a hard cap of 50 resolved organization/unit pairs. A HUC12 is a disclosed resolution step, not a river-corridor or causal inference. ATTAINS requires a free Data.gov API key supplied only through `ATTAINS_API_KEY`; the adapter sends it in the documented `X-Api-Key` header and provenance URLs deliberately omit credentials. Missing configuration fails before network activity. Assessment output is labelled `assessment_context`: a reporting-cycle finding, not a current-condition measurement or causal conclusion.
 
 ## Cache and transport policy
 

@@ -182,6 +182,8 @@ async def get_assessment_context(query: AssessmentContextQuery) -> dict:
             ATTAINS_CAVEAT,
         ),
     }
+    if len(result.assessment_query_urls) > 1:
+        response["provenance"]["query_urls"] = result.assessment_query_urls
     if result.resolution_query_url is not None:
         response["geographic_resolution"] = {
             "input": {"huc12": query.huc12},

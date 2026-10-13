@@ -29,7 +29,9 @@ For each live scenario record:
 
 ## ATTAINS live-verification status
 
-On 2026-10-13, the new EPA endpoint returned the documented `API_KEY_MISSING` response without a key. A live `huc12summary` request with the EPA-documented `DEMO_KEY` returned one real HUC12 summary and 18 assessment-unit identifiers for HUC12 `020700100204`. The `assessments` endpoint then returned HTTP 429 for the shared low-rate demo key, so this repository does **not** record a fabricated end-to-end result. Run scenario 10 with a non-rate-limited `ATTAINS_API_KEY` before representing the adapter as live-verified.
+On 2026-10-13, the new EPA endpoint returned the documented `API_KEY_MISSING` response without a key. A live `huc12summary` request with the EPA-documented `DEMO_KEY` returned one real HUC12 summary and 18 assessment-unit identifiers for HUC12 `020700100204`, but the `assessments` endpoint returned HTTP 429 for that shared low-rate key.
+
+The adapter was subsequently verified end-to-end using an environment-supplied, non-committed Data.gov key. `get_assessment_context(assessment_unit_id="DCTFD01R_00", reporting_cycle="2024")` first resolved the unit to authoritative organization ID `DOEE`, then returned HTTP 200 and one normalized record: reporting cycle `2024`, report status `EPA Final Action`, assessment status `Not Supporting`, four designated uses, and six parameter-context records. This two-step resolution avoids assuming that an assessment-unit prefix is a state code. No credential value was recorded in this document, provenance, source control, or test output.
 
 ## Hardened-retrieval verified run
 

@@ -109,6 +109,19 @@ async def test_assessment_query_flattens_the_documented_report_envelope() -> Non
     }
 
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/assessmentUnits"):
+            return httpx.Response(
+                200,
+                json={
+                    "count": 1,
+                    "items": [
+                        {
+                            "organizationIdentifier": "DOEE",
+                            "assessmentUnits": [{"assessmentUnitIdentifier": "DCTFD01R_00"}],
+                        }
+                    ],
+                },
+            )
         return httpx.Response(200, json=payload)
 
     adapter = AttainsAdapter(
@@ -206,6 +219,22 @@ async def test_huc12_resolution_forwards_ids_cycle_and_resolution_provenance() -
                     ],
                 },
             )
+        if request.url.path.endswith("/assessmentUnits"):
+            return httpx.Response(
+                200,
+                json={
+                    "count": 1,
+                    "items": [
+                        {
+                            "organizationIdentifier": "DOEE",
+                            "assessmentUnits": [
+                                {"assessmentUnitIdentifier": "DCTFD01R_00"},
+                                {"assessmentUnitIdentifier": "DCTNA01R_00"},
+                            ],
+                        }
+                    ],
+                },
+            )
         return httpx.Response(200, json={"count": 0, "items": []})
 
     adapter = AttainsAdapter(
@@ -220,9 +249,92 @@ async def test_huc12_resolution_forwards_ids_cycle_and_resolution_provenance() -
     assert result.resolution_query_url == (
         "https://api.epa.gov/attains/huc12summary?huc=020700100204"
     )
+    assert len(requests) == 3
+    assert requests[1].url.path.endswith("/assessmentUnits")
+    assert requests[2].url.params["organizationId"] == "DOEE"
+    assert "state" not in requests[2].url.params
+    assert requests[2].url.params["assessmentUnitIdentifier"] == "DCTFD01R_00,DCTNA01R_00"
+    assert requests[2].url.params["reportingCycle"] == "2024"
+
+
+@pytest.mark.asyncio
+async def test_assessment_query_resolves_authoritative_organization_before_retrieval() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path.endswith("/assessmentUnits"):
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "organizationIdentifier": "NAVAJO",
+                            "assessmentUnits": [{"assessmentUnitIdentifier": "ZZ-TRIBAL-001"}],
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(200, json={"count": 0, "items": []})
+
+    adapter = AttainsAdapter(
+        api_key="not-embedded",
+        client=JsonHttpClient(transport=httpx.MockTransport(handler)),
+    )
+    await adapter.assessment_context(AssessmentContextQuery(assessment_unit_id="ZZ-TRIBAL-001"))
+
     assert len(requests) == 2
-    assert requests[1].url.params["assessmentUnitIdentifier"] == "DCTFD01R_00,DCTNA01R_00"
-    assert requests[1].url.params["reportingCycle"] == "2024"
+    assert requests[1].url.params["organizationId"] == "NAVAJO"
+    assert "state" not in requests[1].url.params
+
+
+@pytest.mark.asyncio
+async def test_huc12_resolution_handles_multiple_authoritative_organizations() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path.endswith("/huc12summary"):
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "assessmentUnits": [
+                                {"assessmentUnitId": "DC-001"},
+                                {"assessmentUnitId": "MD-001"},
+                            ]
+                        }
+                    ]
+                },
+            )
+        if request.url.path.endswith("/assessmentUnits"):
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "organizationIdentifier": "DOEE",
+                            "assessmentUnits": [{"assessmentUnitIdentifier": "DC-001"}],
+                        },
+                        {
+                            "organizationIdentifier": "MDE",
+                            "assessmentUnits": [{"assessmentUnitIdentifier": "MD-001"}],
+                        },
+                    ]
+                },
+            )
+        return httpx.Response(200, json={"count": 0, "items": []})
+
+    adapter = AttainsAdapter(
+        api_key="not-embedded",
+        client=JsonHttpClient(transport=httpx.MockTransport(handler)),
+    )
+    result = await adapter.assessment_context(AssessmentContextQuery(huc12="020700100204"))
+
+    assert result.records == []
+    assert len(result.assessment_query_urls) == 2
+    assert [request.url.params["organizationId"] for request in requests[2:]] == ["DOEE", "MDE"]
 
 
 @pytest.mark.asyncio

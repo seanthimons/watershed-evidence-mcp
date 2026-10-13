@@ -11,6 +11,7 @@ from watershed_evidence_mcp.models import AssessmentContextQuery
 
 ATTAINS_BASE_URL = "https://api.epa.gov/attains"
 ASSESSMENTS_URL = f"{ATTAINS_BASE_URL}/assessments"
+ASSESSMENT_UNITS_URL = f"{ATTAINS_BASE_URL}/assessmentUnits"
 HUC12_SUMMARY_URL = f"{ATTAINS_BASE_URL}/huc12summary"
 MAX_HUC_ASSESSMENT_UNITS = 50
 
@@ -105,8 +106,19 @@ def normalize_assessment(assessment: dict, report: dict) -> dict:
 @dataclass(frozen=True)
 class AssessmentContextResult:
     records: list[dict]
-    assessment_query_url: str
+    assessment_query_urls: list[str]
     resolution_query_url: str | None = None
+
+    @property
+    def assessment_query_url(self) -> str:
+        """Primary query URL retained for the shared provenance contract."""
+        return self.assessment_query_urls[0]
+
+
+@dataclass(frozen=True)
+class ResolvedAssessmentUnits:
+    organization_id: str
+    assessment_unit_ids: list[str]
 
 
 class AttainsAdapter:
@@ -130,33 +142,80 @@ class AttainsAdapter:
             f"{url}?{urlencode({key: value for key, value in params.items() if key != 'api_key'})}"
         )
 
-    async def _get_assessments(
-        self, assessment_unit_ids: list[str], reporting_cycle: str | None
-    ) -> tuple[list[dict], str]:
-        params = {
-            "assessmentUnitIdentifier": ",".join(assessment_unit_ids),
-        }
-        if reporting_cycle is not None:
-            params["reportingCycle"] = reporting_cycle
+    async def _resolve_assessment_units(
+        self, assessment_unit_ids: list[str]
+    ) -> tuple[list[ResolvedAssessmentUnits], str]:
+        params = {"assessmentUnitIdentifier": ",".join(assessment_unit_ids)}
         payload = await self.client.get_json(
-            ASSESSMENTS_URL,
+            ASSESSMENT_UNITS_URL,
             params,
             headers={"X-Api-Key": self._require_api_key()},
         )
-        records = [
-            normalize_assessment(assessment, report)
-            for report in _items(payload.get("items"))
-            for assessment in _items(report.get("assessments"))
+        requested_ids = set(assessment_unit_ids)
+        resolutions = [
+            ResolvedAssessmentUnits(
+                organization_id=organization_id,
+                assessment_unit_ids=unit_ids,
+            )
+            for organization in _items(payload.get("items"))
+            if (organization_id := _string(_first(organization, "organizationIdentifier")))
+            if (
+                unit_ids := [
+                    identifier
+                    for unit in _items(organization.get("assessmentUnits"))
+                    if (identifier := _string(_first(unit, "assessmentUnitIdentifier")))
+                    in requested_ids
+                ]
+            )
         ]
-        return records, self._public_query_url(ASSESSMENTS_URL, params)
+        if sum(len(resolution.assessment_unit_ids) for resolution in resolutions) > (
+            MAX_HUC_ASSESSMENT_UNITS
+        ):
+            raise ValueError(
+                "assessment-unit resolution returned more than 50 organization/unit pairs; "
+                "select one assessment_unit_id instead"
+            )
+        return resolutions, self._public_query_url(ASSESSMENT_UNITS_URL, params)
+
+    async def _get_assessments(
+        self,
+        resolutions: list[ResolvedAssessmentUnits],
+        reporting_cycle: str | None,
+    ) -> tuple[list[dict], list[str]]:
+        records: list[dict] = []
+        query_urls: list[str] = []
+        for resolution in resolutions:
+            params = {
+                "organizationId": resolution.organization_id,
+                "assessmentUnitIdentifier": ",".join(resolution.assessment_unit_ids),
+            }
+            if reporting_cycle is not None:
+                params["reportingCycle"] = reporting_cycle
+            payload = await self.client.get_json(
+                ASSESSMENTS_URL,
+                params,
+                headers={"X-Api-Key": self._require_api_key()},
+            )
+            records.extend(
+                normalize_assessment(assessment, report)
+                for report in _items(payload.get("items"))
+                for assessment in _items(report.get("assessments"))
+            )
+            query_urls.append(self._public_query_url(ASSESSMENTS_URL, params))
+        return records, query_urls
 
     async def assessment_context(self, query: AssessmentContextQuery) -> AssessmentContextResult:
         """Return current or requested-cycle assessment context for an exact selector."""
         if query.assessment_unit_id is not None:
-            records, assessment_query_url = await self._get_assessments(
-                [query.assessment_unit_id], query.reporting_cycle
+            resolutions, resolution_query_url = await self._resolve_assessment_units(
+                [query.assessment_unit_id]
             )
-            return AssessmentContextResult(records, assessment_query_url)
+            if not resolutions:
+                return AssessmentContextResult([], [resolution_query_url], resolution_query_url)
+            records, assessment_query_urls = await self._get_assessments(
+                resolutions, query.reporting_cycle
+            )
+            return AssessmentContextResult(records, assessment_query_urls, resolution_query_url)
 
         huc_params = {"huc": query.huc12 or ""}
         huc_payload = await self.client.get_json(
@@ -165,9 +224,9 @@ class AttainsAdapter:
             headers={"X-Api-Key": self._require_api_key()},
         )
         assessment_summaries = _items(huc_payload.get("items"))
-        resolution_query_url = self._public_query_url(HUC12_SUMMARY_URL, huc_params)
+        huc_resolution_query_url = self._public_query_url(HUC12_SUMMARY_URL, huc_params)
         if not assessment_summaries:
-            return AssessmentContextResult([], resolution_query_url, resolution_query_url)
+            return AssessmentContextResult([], [huc_resolution_query_url], huc_resolution_query_url)
         if len(assessment_summaries) != 1:
             raise ValueError("ATTAINS returned an unexpected HUC12 summary shape")
         assessment_unit_ids = [
@@ -178,17 +237,20 @@ class AttainsAdapter:
             identifier for identifier in assessment_unit_ids if identifier is not None
         ]
         if not assessment_unit_ids:
-            return AssessmentContextResult([], resolution_query_url, resolution_query_url)
+            return AssessmentContextResult([], [huc_resolution_query_url], huc_resolution_query_url)
         if len(assessment_unit_ids) > MAX_HUC_ASSESSMENT_UNITS:
             raise ValueError(
                 "HUC12 resolves to more than 50 assessment units; select an assessment_unit_id "
                 "instead"
             )
-        records, assessment_query_url = await self._get_assessments(
-            assessment_unit_ids, query.reporting_cycle
+        resolutions, assessment_units_query_url = await self._resolve_assessment_units(
+            assessment_unit_ids
         )
-        return AssessmentContextResult(
-            records,
-            assessment_query_url,
-            self._public_query_url(HUC12_SUMMARY_URL, huc_params),
+        if not resolutions:
+            return AssessmentContextResult(
+                [], [assessment_units_query_url], huc_resolution_query_url
+            )
+        records, assessment_query_urls = await self._get_assessments(
+            resolutions, query.reporting_cycle
         )
+        return AssessmentContextResult(records, assessment_query_urls, huc_resolution_query_url)
