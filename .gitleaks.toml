@@ -1,0 +1,6 @@
+title = "gitleaks configuration"
+
+[extend]
+useDefault = true
+
+# Add confirmed false positives only with a narrow path and regex allowlist.
