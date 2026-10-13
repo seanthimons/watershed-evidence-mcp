@@ -45,6 +45,17 @@ Use an MCP client configured for stdio, for example:
 }
 ```
 
+## Hackathon demo
+
+The presentation-grade Little Miami River near Milford flow is documented in
+[`docs/little-miami-demo.md`](docs/little-miami-demo.md). It includes a reproducible
+MCP client script, explicit river-name disambiguation, bounded source queries,
+evidence labels, failure behavior, and reset instructions.
+
+```bash
+uv run python scripts/run_little_miami_demo.py
+```
+
 ## Guardrails
 
 - Every successful upstream response includes query URL(s), retrieval timestamp, source/version, and a data-use caveat.
