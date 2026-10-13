@@ -7,7 +7,7 @@ It helps an AI client answer bounded questions about a **river, watershed, or ar
 1. Raw monitoring observations from the Water Quality Portal (WQP).
 2. Monitoring-location coverage and availability summaries from WQP.
 3. EPA Freshwater Explorer curated/modelled screening context.
-4. Assessment context from EPA ATTAINS (planned adapter).
+4. Assessment context from EPA ATTAINS.
 
 This is an exploratory prototype for the [GSA MCP Server and AI Agent Government Hackathon](https://www.gsa.gov/artificial-intelligence/ai-community-of-practice/events-and-training/mcp-server-and-ai-agent-government-hackathon). It only calls public data services and performs no writes.
 
@@ -20,6 +20,7 @@ WQX Web's API supports authenticated data-submission workflows. Public retrieval
 ```text
 resolve_waterbody → wqp_available_data → wqp_monitoring_sites → wqp_measurements
                                       ↘ freshwater_screening_baseline
+assessment-unit ID or HUC12 ───────────────→ get_assessment_context
 ```
 
 The server uses the summary endpoint before raw-result retrieval. `wqp_measurements` requires a specific characteristic plus a bounded date range and either selected sites, a bounding box, or a point/radius.
@@ -51,6 +52,8 @@ Use an MCP client configured for stdio, for example:
 - It does not infer a river corridor from a name alone: `resolve_waterbody` returns candidates and the caller must choose one.
 - It preserves original identifiers, units, qualifiers, and source fields.
 - `wqp_measurements` uses a local DuckDB cache keyed by normalized parameters, endpoint, source, and source version. Entries have a one-hour TTL; expired entries are deleted on lookup, and a source-version change creates a distinct cache key.
+- ATTAINS calls require a free Data.gov API key supplied at runtime as `ATTAINS_API_KEY`; the adapter sends it only as the documented `X-Api-Key` header, never embeds or logs it, and never includes it in returned provenance URLs. It resolves each requested assessment unit through ATTAINS to obtain authoritative organization IDs before retrieving assessment decisions, rather than inferring a state from an identifier prefix. HUC12 retrieval remains bounded to 50 resolved organization/unit pairs. Missing configuration fails before a network request with the registration URL.
+- ATTAINS responses describe a reporting cycle and are context only; they do not establish current condition or prove a cause.
 - It caps results and labels every cap-reached response `truncated: true`; WQX 2 results have no stable cursor here, so the continuation strategy is to narrow date range, station IDs, or characteristics before requesting the next slice.
 - Upstream requests use a 20-second timeout, a 10 MB response limit, and expected-content-type checks. Service failures name the safe corrective action without exposing a traceback.
 - WQX 2 is the default compatibility mode. `compatibility_mode="wqx3"` is explicit but currently rejected pending schema validation, rather than silently routing through a legacy parser.
@@ -60,6 +63,7 @@ Use an MCP client configured for stdio, for example:
 - [WQP Web Services Guide](https://www.waterqualitydata.us/webservices_documentation/)
 - [WQP modernization / WQX 3 reference](https://www.epa.gov/waterdata/water-quality-portal-modernization-quick-reference-guide)
 - [EPA Freshwater Explorer](https://www.epa.gov/water-research/freshwater-explorer)
+- [EPA ATTAINS Web Services](https://www.epa.gov/waterdata/how-access-and-use-attains-web-services)
 - [EPA WATERS GeoViewer surface-water layer](https://watersgeo.epa.gov/arcgis/rest/services/OWOTHER/WATERS_GeoViewer_SurfaceWater/MapServer/1)
 
 ## Current scope

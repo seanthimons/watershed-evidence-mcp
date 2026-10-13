@@ -13,6 +13,9 @@ The GSA hackathon requires submitters to document evaluation setup and results. 
 7. Invalid: reversed dates.
 8. Invalid: result request exceeds maximum cap.
 9. Upstream outage/malformed response is expressed as an actionable tool error without exposing internals.
+10. Valid ATTAINS assessment-context lookup with an environment-supplied API key; output includes reporting cycle, use, status, parameter context, source identifiers, query URL, timestamp, and causal caveat.
+11. Invalid: missing or malformed HUC12 / assessment-unit selector is rejected before a network call.
+12. Invalid configuration: missing `ATTAINS_API_KEY` fails cleanly before a network call.
 
 ## Metrics
 
@@ -23,6 +26,12 @@ For each live scenario record:
 - HTTP status, result count, and wall-clock duration
 - successful structured response / expected validation error
 - provenance completeness: source, query URL, timestamp, and caveat all present
+
+## ATTAINS live-verification status
+
+On 2026-10-13, the new EPA endpoint returned the documented `API_KEY_MISSING` response without a key. A live `huc12summary` request with the EPA-documented `DEMO_KEY` returned one real HUC12 summary and 18 assessment-unit identifiers for HUC12 `020700100204`, but the `assessments` endpoint returned HTTP 429 for that shared low-rate key.
+
+The adapter was subsequently verified end-to-end using an environment-supplied, non-committed Data.gov key. `get_assessment_context(assessment_unit_id="DCTFD01R_00", reporting_cycle="2024")` first resolved the unit to authoritative organization ID `DOEE`, then returned HTTP 200 and one normalized record: reporting cycle `2024`, report status `EPA Final Action`, assessment status `Not Supporting`, four designated uses, and six parameter-context records. This two-step resolution avoids assuming that an assessment-unit prefix is a state code. No credential value was recorded in this document, provenance, source control, or test output.
 
 ## Hardened-retrieval verified run
 

@@ -6,11 +6,13 @@ from urllib.parse import urlencode
 
 from mcp.server.fastmcp import FastMCP
 
+from watershed_evidence_mcp.adapters.attains import AttainsAdapter
 from watershed_evidence_mcp.adapters.freshwater import FreshwaterAdapter
 from watershed_evidence_mcp.adapters.waters import WatersAdapter
 from watershed_evidence_mcp.adapters.wqp import WqpAdapter
 from watershed_evidence_mcp.http import JsonHttpClient
 from watershed_evidence_mcp.models import (
+    AssessmentContextQuery,
     BoundingBox,
     Provenance,
     QueryScope,
@@ -35,6 +37,10 @@ WQP_CAVEAT = (
 WATERS_CAVEAT = (
     "A river name can match more than one feature. Candidates are not a complete river corridor; "
     "the caller must select a candidate and define an explicit query area."
+)
+ATTAINS_CAVEAT = (
+    "ATTAINS reports assessment decisions for a reporting cycle. It does not establish the "
+    "current condition of a waterbody or prove the cause of an observed condition."
 )
 
 
@@ -152,6 +158,40 @@ async def wqp_measurements(query: WqpQuery) -> dict:
             "Water Quality Portal", result.source_version, result.query_url, WQP_CAVEAT
         ),
     }
+
+
+@mcp.tool(
+    description=(
+        "Retrieve read-only EPA ATTAINS assessment reporting context for one exact "
+        "assessment unit or by a disclosed HUC12-to-assessment-unit resolution. Returns reporting-"
+        "cycle status, designated uses, parameter context, source identifiers, and provenance. "
+        "An assessment is not proof of a present-day condition or causal finding."
+    )
+)
+async def get_assessment_context(query: AssessmentContextQuery) -> dict:
+    """Retrieve ATTAINS reporting context without turning it into a causal conclusion."""
+    result = await AttainsAdapter().assessment_context(query)
+    response = {
+        "evidence_type": "assessment_context",
+        "returned_records": len(result.records),
+        "records": result.records,
+        "provenance": _provenance(
+            "U.S. EPA ATTAINS",
+            "ATTAINS public web services",
+            result.assessment_query_url,
+            ATTAINS_CAVEAT,
+        ),
+    }
+    if len(result.assessment_query_urls) > 1:
+        response["provenance"]["query_urls"] = result.assessment_query_urls
+    if result.resolution_query_url is not None:
+        response["geographic_resolution"] = {
+            "input": {"huc12": query.huc12},
+            "query_url": result.resolution_query_url,
+            "caveat": "The HUC12 resolution lists associated assessment units; it does not "
+            "create a river-corridor or causal inference.",
+        }
+    return response
 
 
 @mcp.tool(
