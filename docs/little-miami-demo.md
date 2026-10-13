@@ -17,7 +17,7 @@ uv sync --all-groups --locked
 uv run python scripts/run_little_miami_demo.py
 ```
 
-The script starts `watershed-evidence-mcp` as a stdio child process and calls it through the official Python MCP client. It prints a presentation-ready Markdown packet containing the selected reach, scope, evidence labels, source-query URLs, and interpretation boundary.
+The script starts `watershed-evidence-mcp` as a stdio child process and calls it through the official Python MCP client. It prints a presentation-ready Markdown packet containing the selected reach, scope, a metadata-preserving observation table, full source provenance, and interpretation boundary.
 
 To save a transient packet outside source control:
 
@@ -84,7 +84,7 @@ The script executes these calls in order. The prompts below are suitable for a c
    - **Observation** — raw WQP records, units, qualifiers, methods, and cap/truncation state retained.
    - **Coverage summary** / **Station inventory** — availability evidence, not concentrations.
    - **Screening baseline** — Freshwater Explorer modelled context, not a current observation or criterion.
-   - **Assessment context** — if ATTAINS is used in a follow-up, reporting-cycle context only; it requires `ATTAINS_API_KEY` and must not be framed as proof of current condition or cause.
+   - **Assessment context — not retrieved** — the default packet states this explicitly because ATTAINS requires `ATTAINS_API_KEY`; it does not make or imply an assessment finding.
 
 ## Failure and ambiguity behavior
 

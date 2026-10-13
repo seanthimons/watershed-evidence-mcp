@@ -12,7 +12,11 @@ import anyio
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-from watershed_evidence_mcp.demo import DemoSelection, render_evidence_packet
+from watershed_evidence_mcp.demo import (
+    DemoSelection,
+    render_evidence_packet,
+    validate_selected_candidate,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEMO_BOUNDS = {"west": -84.32, "south": 39.15, "east": -84.27, "north": 39.20}
@@ -55,6 +59,12 @@ async def run_demo() -> str:
         cwd=REPO_ROOT,
     )
     scope = {"bounding_box": DEMO_BOUNDS}
+    selection = DemoSelection(
+        reachcode=SELECTED_REACHCODE,
+        nhdplusid=SELECTED_NHDPLUSID,
+        bounding_box=DEMO_BOUNDS,
+        station_id=SELECTED_STATION,
+    )
     async with stdio_client(server) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
@@ -64,6 +74,7 @@ async def run_demo() -> str:
                 ),
                 "resolve_waterbody",
             )
+            validate_selected_candidate(selection, resolution)
             coverage = tool_json(
                 await session.call_tool("wqp_available_data", {"scope": scope}),
                 "wqp_available_data",
@@ -95,12 +106,6 @@ async def run_demo() -> str:
                 "freshwater_screening_baseline",
             )
 
-    selection = DemoSelection(
-        reachcode=SELECTED_REACHCODE,
-        nhdplusid=SELECTED_NHDPLUSID,
-        bounding_box=DEMO_BOUNDS,
-        station_id=SELECTED_STATION,
-    )
     return render_evidence_packet(selection, resolution, coverage, stations, observations, baseline)
 
 
