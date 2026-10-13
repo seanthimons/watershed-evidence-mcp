@@ -52,7 +52,7 @@ Run from the repository with Python 3.11.15 on 2026-10-13 EDT. The program outpu
 
 | Scenario | Input | Result | Wall-clock |
 | --- | --- | --- | --- |
-| Tool registration | Local FastMCP inspection | 6 tools registered | n/a |
+| Tool registration | Local FastMCP inspection | 7 tools registered | n/a |
 | River resolution | `Little Miami River`, max 5 | 5 candidates; first was reachcode `05090202002563`, NHDPlusID `25243915` | 2.52 s |
 | Freshwater Explorer baseline | WGS84 bbox `-84.1,39.1,-84.0,39.2`, 10-record cap | 10 predicted-background conductivity records | 4.27 s |
 | WQP measurement retrieval | `USGS-03246200`, `Specific conductance`, 1970-01-01 through 1980-01-01, 25-record cap | 25 normalized raw observations; first value `355 uS/cm @25C`, sampled 1972-08-23 | 0.17 s |
