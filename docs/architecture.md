@@ -11,11 +11,16 @@ Tools represent a domain action an agent can select correctly, rather than a thi
 - `adapters/wqp.py`: WQP parameter construction, call policy, and response normalization.
 - `adapters/waters.py`: EPA WATERS GeoViewer river-name resolution.
 - `adapters/freshwater.py`: Freshwater Explorer screening-only adapter.
+- `adapters/attains.py`: ATTAINS assessment-context adapter with explicit API-key handling.
 - `http.py`: injectable HTTP boundary.
 
 ## Query policy
 
 `wqp_measurements` needs one exact geographic/station selector, at least one exact WQP characteristic, and an inclusive date range. Results are bounded by `result_limit`; a cap-reached result is explicitly marked `truncated` and instructs the caller to narrow dates, station IDs, or characteristics for a separate bounded slice. The WQP availability summary is the intended preflight tool.
+
+## ATTAINS policy
+
+`get_assessment_context` requires exactly one `assessment_unit_id` or `huc12`. A HUC12 is a disclosed resolution step: the adapter gets the HUC12 summary, takes its associated assessment-unit IDs, then requests their assessment records. It fails rather than silently truncating a HUC12 that resolves to more than 50 units. ATTAINS now requires a free Data.gov API key supplied only through `ATTAINS_API_KEY`; the adapter sends it in the documented `X-Api-Key` header and provenance URLs deliberately omit it. Assessment output is labelled `assessment_context`: a reporting-cycle finding, not a current-condition measurement or causal conclusion.
 
 ## Cache and transport policy
 

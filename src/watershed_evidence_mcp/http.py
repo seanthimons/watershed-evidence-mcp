@@ -38,13 +38,17 @@ class JsonHttpClient:
         self.transport = transport
 
     async def _get(
-        self, url: str, params: Mapping[str, str] | None, expected_content_types: Sequence[str]
+        self,
+        url: str,
+        params: Mapping[str, str] | None,
+        expected_content_types: Sequence[str],
+        headers: Mapping[str, str] | None = None,
     ) -> HttpResponse:
         try:
             async with httpx.AsyncClient(
                 timeout=self.timeout_seconds, follow_redirects=True, transport=self.transport
             ) as client:
-                async with client.stream("GET", url, params=params) as response:
+                async with client.stream("GET", url, params=params, headers=headers) as response:
                     response.raise_for_status()
                     content_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
                     if not any(
@@ -85,9 +89,18 @@ class JsonHttpClient:
             raise UpstreamServiceError(f"upstream request failed: {exc}") from exc
         return HttpResponse(content=b"".join(chunks), content_type=content_type)
 
-    async def get_json(self, url: str, params: Mapping[str, str] | None = None) -> dict:
+    async def get_json(
+        self,
+        url: str,
+        params: Mapping[str, str] | None = None,
+        *,
+        headers: Mapping[str, str] | None = None,
+    ) -> dict:
         response = await self._get(
-            url, params, ("application/json", "application/geo+json", "application/vnd.geo+json")
+            url,
+            params,
+            ("application/json", "application/geo+json", "application/vnd.geo+json"),
+            headers,
         )
         try:
             payload = json.loads(response.content)

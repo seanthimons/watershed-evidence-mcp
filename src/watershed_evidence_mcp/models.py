@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, date, datetime
 from typing import Annotated, Literal
 
@@ -76,6 +77,25 @@ class QueryScope(BaseModel):
             raise ValueError(
                 "provide exactly one of station_ids, bounding_box, point_radius, or huc8"
             )
+        return self
+
+
+class AssessmentContextQuery(BaseModel):
+    """One exact ATTAINS assessment-unit selector or a HUC12 resolution step."""
+
+    huc12: Annotated[str | None, Field(pattern=r"^\d{12}$")] = None
+    assessment_unit_id: str | None = None
+    reporting_cycle: Annotated[str | None, Field(pattern=r"^\d{4}$")] = None
+
+    @model_validator(mode="after")
+    def validate_selector(self) -> AssessmentContextQuery:
+        selectors = [self.huc12, self.assessment_unit_id]
+        if sum(value is not None for value in selectors) != 1:
+            raise ValueError("provide exactly one of huc12 or assessment_unit_id")
+        if self.assessment_unit_id is not None and not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}", self.assessment_unit_id
+        ):
+            raise ValueError("invalid assessment_unit_id")
         return self
 
 

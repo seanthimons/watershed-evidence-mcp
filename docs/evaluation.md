@@ -13,6 +13,9 @@ The GSA hackathon requires submitters to document evaluation setup and results. 
 7. Invalid: reversed dates.
 8. Invalid: result request exceeds maximum cap.
 9. Upstream outage/malformed response is expressed as an actionable tool error without exposing internals.
+10. Valid ATTAINS assessment-context lookup with an environment-supplied API key; output includes reporting cycle, use, status, parameter context, source identifiers, query URL, timestamp, and causal caveat.
+11. Invalid: missing or malformed HUC12 / assessment-unit selector is rejected before a network call.
+12. Invalid configuration: missing `ATTAINS_API_KEY` fails cleanly before a network call.
 
 ## Metrics
 
@@ -23,6 +26,10 @@ For each live scenario record:
 - HTTP status, result count, and wall-clock duration
 - successful structured response / expected validation error
 - provenance completeness: source, query URL, timestamp, and caveat all present
+
+## ATTAINS live-verification status
+
+On 2026-10-13, the new EPA endpoint returned the documented `API_KEY_MISSING` response without a key. A live `huc12summary` request with the EPA-documented `DEMO_KEY` returned one real HUC12 summary and 18 assessment-unit identifiers for HUC12 `020700100204`. The `assessments` endpoint then returned HTTP 429 for the shared low-rate demo key, so this repository does **not** record a fabricated end-to-end result. Run scenario 10 with a non-rate-limited `ATTAINS_API_KEY` before representing the adapter as live-verified.
 
 ## Hardened-retrieval verified run
 
