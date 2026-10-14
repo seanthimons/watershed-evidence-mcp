@@ -7,15 +7,16 @@ The GSA hackathon requires submitters to document evaluation setup and results. 
 1. Valid WQP coverage lookup for a small, real bounding box.
 2. Valid WQP site lookup for the same area.
 3. Valid bounded result query for one documented characteristic and date range.
-4. Ambiguous river-name lookup returns multiple candidates and a disambiguation warning.
-5. Valid Freshwater Explorer predicted-background screening lookup.
-6. Invalid: no spatial/station selector.
-7. Invalid: reversed dates.
-8. Invalid: result request exceeds maximum cap.
-9. Upstream outage/malformed response is expressed as an actionable tool error without exposing internals.
-10. Valid ATTAINS assessment-context lookup with an environment-supplied API key; output includes reporting cycle, use, status, parameter context, source identifiers, query URL, timestamp, and causal caveat.
-11. Invalid: missing or malformed HUC12 / assessment-unit selector is rejected before a network call.
-12. Invalid configuration: missing `ATTAINS_API_KEY` fails cleanly before a network call.
+4. Valid WQP controlled-vocabulary lookup for `Specific conductance`.
+5. Ambiguous river-name lookup returns multiple candidates and a disambiguation warning.
+6. Valid Freshwater Explorer predicted-background screening lookup.
+7. Invalid: no spatial/station selector.
+8. Invalid: reversed dates.
+9. Invalid: result request exceeds maximum cap.
+10. Upstream outage/malformed response is expressed as an actionable tool error without exposing internals.
+11. Valid ATTAINS assessment-context lookup with an environment-supplied API key; output includes reporting cycle, use, status, parameter context, source identifiers, query URL, timestamp, and causal caveat.
+12. Invalid: missing or malformed HUC12 / assessment-unit selector is rejected before a network call.
+13. Invalid configuration: missing `ATTAINS_API_KEY` fails cleanly before a network call.
 
 ## Metrics
 
@@ -49,7 +50,7 @@ Run the explicitly opt-in live evaluation separately:
 uv run python scripts/run_live_evaluation.py --output-dir evaluation-reports
 ```
 
-The command performs five public, read-only, bounded requests: WATERS name resolution (five candidates), WQP summary and station lookups for one public station, WQP results with a 25-record cap, and Freshwater Explorer with a 10-record cap. It uses a temporary WQP cache so the measurement scenario always reaches the live service. If `ATTAINS_API_KEY` is configured through the standard project `.env` file or exported environment, it also evaluates one bounded ATTAINS assessment-context lookup; otherwise that row is recorded as `skipped`, with no request attempted. It creates timestamped JSON and Markdown reports containing endpoint names, query shape, success/error outcome, HTTP outcome, record count, and wall-clock duration. The ignored `evaluation-reports/` directory prevents local reports from entering Git history. The report deliberately retains neither response bodies nor credentials.
+The command performs six public, read-only, bounded requests: WATERS name resolution (five candidates), WQP summary and station lookups for one public station, a five-result WQP controlled-vocabulary lookup for `Specific conductance`, WQP results with a 25-record cap, and Freshwater Explorer with a 10-record cap. It uses a temporary WQP cache so the measurement scenario always reaches the live service. If `ATTAINS_API_KEY` is configured through the standard project `.env` file or exported environment, it also evaluates one bounded ATTAINS assessment-context lookup; otherwise that row is recorded as `skipped`, with no request attempted. It creates timestamped JSON and Markdown reports containing endpoint names, query shape, success/error outcome, HTTP outcome, record count, and wall-clock duration. The ignored `evaluation-reports/` directory prevents local reports from entering Git history. The report deliberately retains neither response bodies nor credentials.
 
 ## Security posture and limitations
 

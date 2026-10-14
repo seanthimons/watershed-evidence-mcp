@@ -114,6 +114,12 @@ async def run_live_evaluation() -> tuple[datetime, list[EvaluationResult]]:
         payload, _ = await wqp.monitoring_sites(scope)
         return len(payload.get("features", []))
 
+    async def vocabulary_request() -> int:
+        payload, _ = await wqp.vocabulary_search(
+            "CharacteristicName", "Specific conductance", page_size=5, page_number=1
+        )
+        return int(payload.get("recordCount", 0))
+
     async def results_request() -> int:
         result = await wqp.measurements(query)
         return len(result.records)
@@ -146,6 +152,17 @@ async def run_live_evaluation() -> tuple[datetime, list[EvaluationResult]]:
             "Water Quality Portal Station/search",
             {"station_ids": [PUBLIC_STATION_ID]},
             sites_request,
+        ),
+        await _measure(
+            "WQP controlled vocabulary",
+            "Water Quality Portal Codes/characteristicname",
+            {
+                "vocabulary": "CharacteristicName",
+                "text": "Specific conductance",
+                "page_size": 5,
+                "page_number": 1,
+            },
+            vocabulary_request,
         ),
         await _measure(
             "WQP bounded measurements",
