@@ -76,12 +76,19 @@ async def test_vocabulary_search_names_wqp_and_the_requested_vocabulary_on_failu
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("text", ["", "   ", "x" * 201])
-async def test_vocabulary_search_rejects_blank_or_oversized_text_before_network(
-    text: str,
+async def test_vocabulary_search_rejects_invalid_text_before_network(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    with pytest.raises(ValueError, match="text must contain 1 to 200 non-whitespace characters"):
-        await wqp_vocab_search("CharacteristicName", text)
+    async def unexpected_request(*args: object, **kwargs: object) -> tuple[dict, str]:
+        raise AssertionError("vocabulary search must reject invalid text before an HTTP request")
+
+    monkeypatch.setattr(WqpAdapter, "vocabulary_search", unexpected_request)
+
+    for text in ("", "   ", "x" * 201, " " * 10_000 + "x"):
+        with pytest.raises(
+            ValueError, match="text must be nonblank and no longer than 200 characters"
+        ):
+            await wqp_vocab_search("CharacteristicName", text)
 
 
 def test_scope_rejects_unbounded_result_query() -> None:
