@@ -6,6 +6,7 @@ import pytest
 from watershed_evidence_mcp.adapters.wqp import WqpAdapter, normalize_result_row
 from watershed_evidence_mcp.http import JsonHttpClient, UpstreamServiceError
 from watershed_evidence_mcp.models import BoundingBox, QueryScope, WqpQuery
+from watershed_evidence_mcp.server import wqp_vocab_search
 
 
 def valid_query() -> WqpQuery:
@@ -72,6 +73,15 @@ async def test_vocabulary_search_names_wqp_and_the_requested_vocabulary_on_failu
         await adapter.vocabulary_search(
             "CharacteristicName", "Specific conductance", page_size=5, page_number=1
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("text", ["", "   ", "x" * 201])
+async def test_vocabulary_search_rejects_blank_or_oversized_text_before_network(
+    text: str,
+) -> None:
+    with pytest.raises(ValueError, match="text must contain 1 to 200 non-whitespace characters"):
+        await wqp_vocab_search("CharacteristicName", text)
 
 
 def test_scope_rejects_unbounded_result_query() -> None:

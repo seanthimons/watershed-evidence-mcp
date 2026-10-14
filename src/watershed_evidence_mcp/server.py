@@ -231,6 +231,8 @@ async def wqp_vocab_search(
     """Discover exact, permissible WQP query values without silent fuzzy matching."""
     if not vocabulary.replace("_", "").isalnum():
         raise ValueError("vocabulary must contain only letters, digits, and underscores")
+    if not 1 <= len(text.strip()) <= 200:
+        raise ValueError("text must contain 1 to 200 non-whitespace characters")
     if not 1 <= page_size <= 100:
         raise ValueError("page_size must be between 1 and 100")
     if page_number < 1:
