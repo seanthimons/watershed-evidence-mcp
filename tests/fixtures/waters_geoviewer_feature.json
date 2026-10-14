@@ -1,0 +1,15 @@
+{
+  "features": [
+    {
+      "attributes": {
+        "GNIS_NAME": "Little Miami River",
+        "REACHCODE": "05090202000010",
+        "NHDPLUSID": 123456789,
+        "STATE": "OH"
+      },
+      "geometry": {
+        "paths": [[[-84.1, 39.0], [-84.0, 39.1]]]
+      }
+    }
+  ]
+}

@@ -33,6 +33,33 @@ On 2026-10-13, the new EPA endpoint returned the documented `API_KEY_MISSING` re
 
 The adapter was subsequently verified end-to-end using an environment-supplied, non-committed Data.gov key. `get_assessment_context(assessment_unit_id="DCTFD01R_00", reporting_cycle="2024")` first resolved the unit to authoritative organization ID `DOEE`, then returned HTTP 200 and one normalized record: reporting cycle `2024`, report status `EPA Final Action`, assessment status `Not Supporting`, four designated uses, and six parameter-context records. This two-step resolution avoids assuming that an assessment-unit prefix is a state code. No credential value was recorded in this document, provenance, source control, or test output.
 
+## Reproducible live evaluation
+
+The normal test suite is intentionally offline and deterministic. It uses `httpx.MockTransport` plus small, redacted representative fixtures in `tests/fixtures/`; it does not call EPA, WQP, or any other network service.
+
+Run the deterministic evidence suite:
+
+```bash
+uv run pytest
+```
+
+Run the explicitly opt-in live evaluation separately:
+
+```bash
+uv run python scripts/run_live_evaluation.py --output-dir evaluation-reports
+```
+
+The command performs five public, read-only, bounded requests: WATERS name resolution (five candidates), WQP summary and station lookups for one public station, WQP results with a 25-record cap, and Freshwater Explorer with a 10-record cap. It uses a temporary WQP cache so the measurement scenario always reaches the live service. It creates timestamped JSON and Markdown reports containing endpoint names, query shape, success/error outcome, record count, and wall-clock duration. The ignored `evaluation-reports/` directory prevents local reports from entering Git history. The report deliberately retains neither response bodies nor credentials; it does not call ATTAINS, because that endpoint needs a user-supplied API key.
+
+## Security posture and limitations
+
+- The server is read-only. It makes no submission, mutation, or credential-management calls.
+- Public-source requests have a 20-second timeout, 10 MB body cap, content-type validation, bounded Pydantic inputs, and actionable upstream errors.
+- `ATTAINS_API_KEY` is only supplied at runtime as the documented header and is never included in provenance URLs, reports, fixtures, or tests.
+- Public records retain their source attribution, original identifiers, units, qualifiers, detection limits, method fields, and caveats. Their reuse terms can vary by contributor; users must check source-specific licensing before redistribution.
+- WQP retrieval is capped and says when a result may be incomplete. WQX 2 has no stable cursor in this adapter, so continuation means narrowing the date range, station selection, or characteristic set rather than assuming a global page sequence.
+- Live outcomes are observations of an external service at one time, not availability guarantees or performance claims. ATTAINS can be rate-limited, and source schemas may change.
+
 ## Hardened-retrieval verified run
 
 Run from the repository with Python 3.11.15 on 2026-10-13 EDT. These are direct live-service results from the hardened WQX 2 adapter, not fixtures.

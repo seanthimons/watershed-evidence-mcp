@@ -1,0 +1,14 @@
+{
+  "features": [
+    {
+      "attributes": {
+        "COMID": 123456,
+        "StreamName": "Little Miami River",
+        "AvgPredEC": 411.2,
+        "F50Pct_PL": 402.0,
+        "FTYPE": "StreamRiver",
+        "FCODE": 46006
+      }
+    }
+  ]
+}
