@@ -34,7 +34,7 @@ cp .env.example .env
 uv run watershed-evidence-mcp
 ```
 
-The server follows the standard Python `.env` convention through `python-dotenv`: it loads a `.env` file from the current working directory without overriding values already exported by the host environment. Keep `.env` local; it is ignored by Git. `.env.example` contains only the variable names required for local setup.
+The server follows the standard Python `.env` convention through `python-dotenv`: it loads **only** a `.env` file in its current working directory, without overriding values already exported by the host environment. The example MCP command uses `uv --directory` so the repository is the working directory. Keep `.env` local; it is ignored by Git. `.env.example` contains only the variable names required for local setup.
 
 Use an MCP client configured for stdio, for example:
 
