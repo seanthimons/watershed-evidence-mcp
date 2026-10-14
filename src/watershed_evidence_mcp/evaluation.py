@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import re
 import tempfile
 import time
 from collections.abc import Awaitable, Callable
@@ -17,11 +19,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from watershed_evidence_mcp.adapters.attains import AttainsAdapter
 from watershed_evidence_mcp.adapters.freshwater import FreshwaterAdapter
 from watershed_evidence_mcp.adapters.waters import WatersAdapter
 from watershed_evidence_mcp.adapters.wqp import WqpAdapter
 from watershed_evidence_mcp.cache import DuckDbCache
-from watershed_evidence_mcp.models import BoundingBox, QueryScope, WqpQuery
+from watershed_evidence_mcp.models import AssessmentContextQuery, BoundingBox, QueryScope, WqpQuery
 
 EVALUATION_VERSION = "1"
 PUBLIC_STATION_ID = "USGS-03246200"
@@ -36,6 +39,7 @@ class EvaluationResult:
     endpoint: str
     query_shape: dict[str, Any]
     outcome: str
+    http_outcome: str
     record_count: int | None
     duration_ms: int
     detail: str | None = None
@@ -44,6 +48,11 @@ class EvaluationResult:
 def _safe_error(exc: Exception) -> str:
     """Return one actionable line without retaining a traceback or response body."""
     return str(exc).splitlines()[0][:500]
+
+
+def _http_outcome_from_error(exc: Exception) -> str:
+    match = re.search(r"HTTP (\d{3})", str(exc))
+    return f"HTTP {match.group(1)}" if match else "request error"
 
 
 async def _measure(
@@ -61,6 +70,7 @@ async def _measure(
             endpoint=endpoint,
             query_shape=query_shape,
             outcome="error",
+            http_outcome=_http_outcome_from_error(exc),
             record_count=None,
             duration_ms=round((time.perf_counter() - started) * 1_000),
             detail=_safe_error(exc),
@@ -70,6 +80,7 @@ async def _measure(
         endpoint=endpoint,
         query_shape=query_shape,
         outcome="success",
+        http_outcome="2xx",
         record_count=count,
         duration_ms=round((time.perf_counter() - started) * 1_000),
     )
@@ -89,6 +100,7 @@ async def run_live_evaluation() -> tuple[datetime, list[EvaluationResult]]:
     wqp = WqpAdapter(cache=DuckDbCache(Path(temporary_cache.name) / "wqp.duckdb"))
     waters = WatersAdapter()
     freshwater = FreshwaterAdapter()
+    attains = AttainsAdapter()
 
     async def waters_request() -> int:
         candidates, _ = await waters.resolve_name("Little Miami River", max_candidates=5)
@@ -109,6 +121,12 @@ async def run_live_evaluation() -> tuple[datetime, list[EvaluationResult]]:
     async def freshwater_request() -> int:
         records, _ = await freshwater.predicted_conductivity(PUBLIC_BOUNDS, max_records=10)
         return len(records)
+
+    async def attains_request() -> int:
+        result = await attains.assessment_context(
+            AssessmentContextQuery(assessment_unit_id="DCTFD01R_00", reporting_cycle="2024")
+        )
+        return len(result.records)
 
     results = [
         await _measure(
@@ -147,6 +165,28 @@ async def run_live_evaluation() -> tuple[datetime, list[EvaluationResult]]:
             freshwater_request,
         ),
     ]
+    if os.getenv("ATTAINS_API_KEY"):
+        results.append(
+            await _measure(
+                "ATTAINS assessment context",
+                "EPA ATTAINS assessments",
+                {"assessment_unit_id": "DCTFD01R_00", "reporting_cycle": "2024"},
+                attains_request,
+            )
+        )
+    else:
+        results.append(
+            EvaluationResult(
+                scenario="ATTAINS assessment context",
+                endpoint="EPA ATTAINS assessments",
+                query_shape={"assessment_unit_id": "DCTFD01R_00", "reporting_cycle": "2024"},
+                outcome="skipped",
+                http_outcome="not requested",
+                record_count=None,
+                duration_ms=0,
+                detail="ATTAINS_API_KEY is not configured",
+            )
+        )
     temporary_cache.cleanup()
     return datetime.now(UTC), results
 
@@ -170,15 +210,15 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- Ran at (UTC): `{payload['ran_at']}`",
         f"- Network policy: {payload['network']}",
         "",
-        "| Scenario | Endpoint | Query shape | Outcome | Records | Duration | Detail |",
-        "| --- | --- | --- | --- | ---: | ---: | --- |",
+        "| Scenario | Endpoint | Query shape | Outcome | HTTP | Records | Duration | Detail |",
+        "| --- | --- | --- | --- | --- | ---: | ---: | --- |",
     ]
     for result in payload["results"]:
         query_shape = json.dumps(result["query_shape"], sort_keys=True).replace("|", "\\|")
         detail = (result["detail"] or "").replace("|", "\\|")
         records = "" if result["record_count"] is None else str(result["record_count"])
         row_template = (
-            "| {scenario} | {endpoint} | `{query_shape}` | {outcome} | "
+            "| {scenario} | {endpoint} | `{query_shape}` | {outcome} | {http_outcome} | "
             "{records} | {duration} ms | {detail} |"
         )
         lines.append(
@@ -187,6 +227,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 endpoint=result["endpoint"],
                 query_shape=query_shape,
                 outcome=result["outcome"],
+                http_outcome=result["http_outcome"],
                 records=records,
                 duration=result["duration_ms"],
                 detail=detail,

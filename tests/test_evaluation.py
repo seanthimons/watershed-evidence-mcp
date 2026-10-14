@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -19,6 +20,7 @@ async def test_measure_records_bounded_live_request_metadata_without_payload() -
     )
 
     assert result.outcome == "success"
+    assert result.http_outcome == "2xx"
     assert result.record_count == 3
     assert result.query_shape == {"result_limit": 25}
     assert result.duration_ms >= 0
@@ -32,11 +34,12 @@ async def test_measure_reports_upstream_failure_without_traceback_or_payload() -
     result = await _measure("failing request", "example endpoint", {}, failing_request)
 
     assert result.outcome == "error"
+    assert result.http_outcome == "request error"
     assert result.record_count is None
     assert result.detail == "upstream response: <large raw payload>"
 
 
-def test_reports_are_dated_machine_and_human_readable_metadata_only(tmp_path) -> None:
+def test_reports_are_dated_machine_and_human_readable_metadata_only(tmp_path: Path) -> None:
     ran_at = datetime(2026, 10, 13, 14, 30, tzinfo=UTC)
     from watershed_evidence_mcp.evaluation import EvaluationResult
 
@@ -45,6 +48,7 @@ def test_reports_are_dated_machine_and_human_readable_metadata_only(tmp_path) ->
         endpoint="Water Quality Portal Result/search",
         query_shape={"result_limit": 25},
         outcome="success",
+        http_outcome="2xx",
         record_count=25,
         duration_ms=123,
     )
