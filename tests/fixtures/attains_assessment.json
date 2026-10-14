@@ -1,0 +1,15 @@
+{
+  "report": {
+    "organizationIdentifier": "DOEE",
+    "reportingCycleText": "2024",
+    "reportStatusCode": "EPA Final Action"
+  },
+  "assessment": {
+    "assessmentUnitIdentifier": "DCTFD01R_00",
+    "overallStatus": "Not Supporting",
+    "epaIRCategory": "4A",
+    "useAttainments": [],
+    "parameters": [],
+    "probableSources": []
+  }
+}
