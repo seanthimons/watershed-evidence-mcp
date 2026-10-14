@@ -111,6 +111,30 @@ class WqpAdapter:
             "against this provenance-preserving adapter. Use compatibility_mode='wqx2'."
         )
 
+    @classmethod
+    def vocabulary_parameters(cls, text: str, page_size: int, page_number: int) -> dict[str, str]:
+        return {
+            "text": text,
+            "pagesize": str(page_size),
+            "pagenumber": str(page_number),
+            "mimeType": "json",
+        }
+
+    async def vocabulary_search(
+        self, vocabulary: str, text: str, *, page_size: int, page_number: int
+    ) -> tuple[dict, str]:
+        """Search a WQP controlled vocabulary using its case-sensitive endpoint path."""
+        endpoint = f"Codes/{vocabulary.lower()}"
+        params = self.vocabulary_parameters(text, page_size, page_number)
+        url = f"https://www.waterqualitydata.us/{endpoint}"
+        query_url = f"{url}?{urlencode(params)}"
+        try:
+            return await self.client.get_json(url, params), query_url
+        except UpstreamServiceError as exc:
+            raise UpstreamServiceError(
+                f"WQP controlled-vocabulary search failed for {vocabulary}: {exc}"
+            ) from exc
+
     async def available_data(self, scope: QueryScope) -> tuple[dict, str]:
         params = self.summary_parameters(scope)
         url = f"{WQP_BASE_URL}/summary/monitoringLocation/search"

@@ -23,7 +23,7 @@ resolve_waterbody → wqp_available_data → wqp_monitoring_sites → wqp_measur
 assessment-unit ID or HUC12 ───────────────→ get_assessment_context
 ```
 
-The server uses the summary endpoint before raw-result retrieval. `wqp_measurements` requires a specific characteristic plus a bounded date range and either selected sites, a bounding box, or a point/radius.
+The server uses the summary endpoint before raw-result retrieval. `wqp_measurements` requires a specific characteristic plus a bounded date range and either selected sites, a bounding box, or a point/radius. Use `wqp_vocab_search` to translate a user phrase into an exact WQP controlled-vocabulary value before supplying it to `wqp_measurements`.
 
 ## Run locally
 

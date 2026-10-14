@@ -1,8 +1,10 @@
 from datetime import date
 
+import httpx
 import pytest
 
 from watershed_evidence_mcp.adapters.wqp import WqpAdapter, normalize_result_row
+from watershed_evidence_mcp.http import JsonHttpClient, UpstreamServiceError
 from watershed_evidence_mcp.models import BoundingBox, QueryScope, WqpQuery
 
 
@@ -25,6 +27,51 @@ def test_result_parameters_are_bounded_and_preserve_exact_characteristic() -> No
     assert params["sampleMedia"] == "Water"
     assert params["mimeType"] == "csv"
     assert params["resultLimit"] == "1000"
+
+
+@pytest.mark.asyncio
+async def test_vocabulary_search_uses_live_case_sensitive_endpoint_and_preserves_query_url() -> (
+    None
+):
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={"codes": [{"value": "Specific conductance"}], "recordCount": 1},
+            request=request,
+        )
+
+    adapter = WqpAdapter(client=JsonHttpClient(transport=httpx.MockTransport(handler)))
+
+    payload, query_url = await adapter.vocabulary_search(
+        "CharacteristicName", "Specific conductance", page_size=5, page_number=2
+    )
+
+    assert payload["codes"] == [{"value": "Specific conductance"}]
+    assert query_url == (
+        "https://www.waterqualitydata.us/Codes/characteristicname?"
+        "text=Specific+conductance&pagesize=5&pagenumber=2&mimeType=json"
+    )
+    assert len(requests) == 1
+    assert str(requests[0].url) == query_url
+
+
+@pytest.mark.asyncio
+async def test_vocabulary_search_names_wqp_and_the_requested_vocabulary_on_failure() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, request=request)
+
+    adapter = WqpAdapter(client=JsonHttpClient(transport=httpx.MockTransport(handler)))
+
+    with pytest.raises(
+        UpstreamServiceError,
+        match=r"WQP controlled-vocabulary search failed for CharacteristicName:.*HTTP 503",
+    ):
+        await adapter.vocabulary_search(
+            "CharacteristicName", "Specific conductance", page_size=5, page_number=1
+        )
 
 
 def test_scope_rejects_unbounded_result_query() -> None:
