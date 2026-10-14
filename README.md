@@ -29,8 +29,12 @@ The server uses the summary endpoint before raw-result retrieval. `wqp_measureme
 
 ```bash
 uv sync --all-groups
+cp .env.example .env
+# Set ATTAINS_API_KEY in .env if you will use assessment-context retrieval.
 uv run watershed-evidence-mcp
 ```
+
+The server follows the standard Python `.env` convention through `python-dotenv`: it loads a `.env` file from the current working directory without overriding values already exported by the host environment. Keep `.env` local; it is ignored by Git. `.env.example` contains only the variable names required for local setup.
 
 Use an MCP client configured for stdio, for example:
 
