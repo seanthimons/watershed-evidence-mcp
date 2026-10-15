@@ -83,4 +83,6 @@ uv run python scripts/run_little_miami_demo.py
 
 ## Current scope
 
-The initial implementation supports WQP public station summaries, station inventory, exact-characteristic measurement retrieval, vocabulary discovery, and river-name candidate resolution. Freshwater Explorer and ATTAINS adapters are deliberately isolated behind their own modules so service changes do not break WQP retrieval.
+The initial implementation supports WQP public station summaries, station inventory, exact-characteristic measurement retrieval, vocabulary discovery, and river-name candidate resolution. `freshwater_screening_baseline` also returns the reaches as a GeoJSON `feature_collection` (EPSG:4326, `id` = `COMID`, attributes in `properties`) alongside `bounding_box`, `truncated`, and `records_without_geometry`. Rendering is out of scope for this server: a client or agent can pass `feature_collection` to its own plotting stack (for example geopandas, `sf`, or Leaflet) and should label the output as modelled screening context, not observations or an impairment finding. Do not infer completeness from the record count; use `truncated`.
+
+Freshwater Explorer and ATTAINS adapters are deliberately isolated behind their own modules so service changes do not break WQP retrieval.

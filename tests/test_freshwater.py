@@ -53,3 +53,24 @@ async def test_exceeded_transfer_limit_marks_truncated() -> None:
     payload = {"features": _features(2), "exceededTransferLimit": True}
     _, _, truncated = await _adapter(payload).predicted_conductivity(BOX, 3)
     assert truncated is True
+
+
+@pytest.mark.asyncio
+async def test_geometry_shapes_and_missing_geometry() -> None:
+    line = [[-84.0, 39.0], [-84.1, 39.1]]
+    payload = {
+        "features": [
+            {"attributes": {"COMID": 1}, "geometry": {"paths": [line]}},
+            {"attributes": {"COMID": 2}, "geometry": {"paths": [line, line]}},
+            {"attributes": {"COMID": 3}},
+            {"attributes": {"COMID": 4}, "geometry": {"paths": []}},
+        ]
+    }
+    features, _, _ = await _adapter(payload).predicted_conductivity(BOX, 10)
+    assert [f["geometry"] and f["geometry"]["type"] for f in features] == [
+        "LineString",
+        "MultiLineString",
+        None,
+        None,
+    ]
+    assert [f["id"] for f in features] == [1, 2, 3, 4]

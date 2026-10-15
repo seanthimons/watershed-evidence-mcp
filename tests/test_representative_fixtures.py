@@ -50,7 +50,13 @@ async def test_freshwater_fixture_exercises_bounded_adapter_without_network() ->
         BoundingBox(west=-84.1, south=39.1, east=-84.0, north=39.2), max_records=10
     )
 
-    assert records == [payload["features"][0]["attributes"]]
+    assert records[0]["properties"] == payload["features"][0]["attributes"]
+    assert records[0]["id"] == 123456
+    assert records[0]["geometry"] == {
+        "type": "LineString",
+        "coordinates": [[-84.05, 39.15], [-84.04, 39.16]],
+    }
+    assert "outSR=4326" in query_url and "returnGeometry=true" in query_url
     assert truncated is False
     assert "resultRecordCount=11" in query_url
 

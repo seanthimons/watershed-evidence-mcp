@@ -125,8 +125,10 @@ async def run_live_evaluation() -> tuple[datetime, list[EvaluationResult]]:
         return len(result.records)
 
     async def freshwater_request() -> int:
-        records, _ = await freshwater.predicted_conductivity(PUBLIC_BOUNDS, max_records=10)
-        return len(records)
+        features, _, _ = await freshwater.predicted_conductivity(PUBLIC_BOUNDS, max_records=10)
+        if features and not any(f["geometry"] for f in features):
+            raise ValueError("Freshwater Explorer returned no stream-reach geometry")
+        return len(features)
 
     async def attains_request() -> int:
         result = await attains.assessment_context(
