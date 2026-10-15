@@ -159,6 +159,46 @@ async def wqp_measurements(query: WqpQuery) -> dict:
 
 @mcp.tool(
     description=(
+        "Retrieve a COMPLETE, explicitly defined WQP observation collection one date window at a "
+        "time. Call with no continuation_token first, then pass each response's "
+        "collection.continuation_token until it is null. The collection is complete only when "
+        "every page from the first to the final one was retrieved. Use wqp_measurements for a "
+        "bounded exploratory sample instead."
+    )
+)
+async def wqp_measurements_page(query: WqpQuery, continuation_token: str | None = None) -> dict:
+    """Retrieve one complete date window; windows tile the query range without gaps."""
+    page = await WqpAdapter().collection_page(query, continuation_token)
+    result = page.result
+    return {
+        "evidence_type": "observation",
+        "returned_records": len(result.records),
+        "result_limit": query.result_limit,
+        "collection": {
+            "query_id": page.query_id,
+            "window": {"start": page.window_start.isoformat(), "end": page.window_end.isoformat()},
+            "window_complete": True,
+            "declared_range": {
+                "start": query.start_date.isoformat(),
+                "end": query.end_date.isoformat(),
+            },
+            "final_page": page.continuation_token is None,
+            "continuation_token": page.continuation_token,
+        },
+        "cache": {
+            "hit": result.cache_hit,
+            "retrieved_at": result.retrieved_at.isoformat(),
+            "ttl_seconds": 3_600,
+        },
+        "records": result.records,
+        "provenance": _provenance(
+            "Water Quality Portal", result.source_version, result.query_url, WQP_CAVEAT
+        ),
+    }
+
+
+@mcp.tool(
+    description=(
         "Retrieve read-only EPA ATTAINS assessment reporting context for one exact "
         "assessment unit or by a disclosed HUC12-to-assessment-unit resolution. Returns reporting-"
         "cycle status, designated uses, parameter context, source identifiers, and provenance. "

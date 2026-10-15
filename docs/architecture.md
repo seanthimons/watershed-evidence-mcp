@@ -16,7 +16,7 @@ Tools represent a domain action an agent can select correctly, rather than a thi
 
 ## Query policy
 
-`wqp_measurements` needs one exact geographic/station selector, at least one exact WQP characteristic, and an inclusive date range. Results are bounded by `result_limit`; a cap-reached result is explicitly marked `truncated` and instructs the caller to narrow dates, station IDs, or characteristics for a separate bounded slice. The WQP availability summary is the intended preflight tool.
+`wqp_measurements` needs one exact geographic/station selector, at least one exact WQP characteristic, and an inclusive date range. Results are bounded by `result_limit`; a cap-reached result is explicitly marked `truncated` and instructs the caller to narrow dates, station IDs, or characteristics for a separate bounded slice. The WQP availability summary is the intended preflight tool. `wqp_measurements_page` adds a complete-collection mode: deterministic date-window pages in which each window is returned only when the upstream result is under the cap, with an opaque continuation token bound to the query identity (see README).
 
 ## ATTAINS policy
 

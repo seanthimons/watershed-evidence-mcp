@@ -30,6 +30,8 @@ EVALUATION_VERSION = "1"
 PUBLIC_STATION_ID = "USGS-03246200"
 PUBLIC_BOUNDS = BoundingBox(west=-84.1, south=39.1, east=-84.0, north=39.2)
 
+MAX_EVALUATION_PAGES = 20
+
 
 @dataclass(frozen=True)
 class EvaluationResult:
@@ -124,6 +126,17 @@ async def run_live_evaluation() -> tuple[datetime, list[EvaluationResult]]:
         result = await wqp.measurements(query)
         return len(result.records)
 
+    async def paged_request() -> int:
+        paged = query.model_copy(update={"result_limit": 10})
+        total, token = 0, None
+        for _ in range(MAX_EVALUATION_PAGES):
+            page = await wqp.collection_page(paged, token)
+            total += len(page.result.records)
+            token = page.continuation_token
+            if token is None:
+                return total
+        raise ValueError("paged collection did not finish within the evaluation page bound")
+
     async def freshwater_request() -> int:
         features, _, _ = await freshwater.predicted_conductivity(PUBLIC_BOUNDS, max_records=10)
         if features and not any(f["geometry"] for f in features):
@@ -176,6 +189,18 @@ async def run_live_evaluation() -> tuple[datetime, list[EvaluationResult]]:
                 "result_limit": 25,
             },
             results_request,
+        ),
+        await _measure(
+            "WQP paged complete collection",
+            "Water Quality Portal Result/search (date-window pages)",
+            {
+                "station_ids": [PUBLIC_STATION_ID],
+                "characteristic_names": ["Specific conductance"],
+                "date_range": "1970-01-01 through 1980-01-01",
+                "result_limit": 10,
+                "max_pages": MAX_EVALUATION_PAGES,
+            },
+            paged_request,
         ),
         await _measure(
             "Freshwater Explorer screening baseline",
