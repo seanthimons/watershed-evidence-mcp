@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import base64
 import csv
+import hashlib
+import json
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from io import StringIO
 from pathlib import Path
 from urllib.parse import urlencode
@@ -35,6 +38,43 @@ class MeasurementResult:
     cache_hit: bool
     truncated: bool
     continuation: str | None
+
+
+MAX_WINDOW_REQUESTS = 12
+
+
+@dataclass(frozen=True)
+class CollectionPage:
+    """One complete date window of a defined collection, plus how to fetch the next one."""
+
+    result: MeasurementResult
+    query_id: str
+    window_start: date
+    window_end: date
+    continuation_token: str | None
+
+
+def query_id(query: WqpQuery) -> str:
+    return hashlib.sha256(query.model_dump_json().encode()).hexdigest()[:16]
+
+
+def _encode_token(qid: str, start: date, span_days: int) -> str:
+    raw = json.dumps({"q": qid, "s": start.isoformat(), "d": span_days}, separators=(",", ":"))
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+
+def _decode_token(token: str, query: WqpQuery) -> tuple[date, int]:
+    try:
+        data = json.loads(base64.urlsafe_b64decode(token.encode()))
+        start, span = date.fromisoformat(data["s"]), int(data["d"])
+        qid = data["q"]
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ValueError("invalid continuation token") from exc
+    if qid != query_id(query):
+        raise ValueError("continuation token belongs to a different query")
+    if not query.start_date <= start <= query.end_date or span < 1:
+        raise ValueError("continuation token is outside the query date range")
+    return start, span
 
 
 class WqpAdapter:
@@ -192,6 +232,43 @@ class WqpAdapter:
         return self._measurement_result(
             payload, query_url, source_version, entry.retrieved_at, cache_hit=False
         )
+
+    async def collection_page(
+        self, query: WqpQuery, continuation_token: str | None = None
+    ) -> CollectionPage:
+        """Return the next date window whose upstream result is below the cap, so it is complete.
+
+        WQX 2 has no stable cursor and unsorted results, so completeness is established per
+        date window: a window is complete only if the source returned fewer rows than the cap.
+        """
+        if continuation_token is None:
+            start, span = query.start_date, (query.end_date - query.start_date).days + 1
+        else:
+            start, span = _decode_token(continuation_token, query)
+        span = min(span, (query.end_date - start).days + 1)
+        for _ in range(MAX_WINDOW_REQUESTS):
+            end = start + timedelta(days=span - 1)
+            result = await self.measurements(
+                query.model_copy(update={"start_date": start, "end_date": end})
+            )
+            if not result.truncated:
+                break
+            if span == 1:
+                raise ValueError(
+                    f"{start} alone has at least result_limit={query.result_limit} records; "
+                    "a single day cannot be split further. Narrow stations or characteristics, "
+                    "or raise result_limit (max 10000)."
+                )
+            span = (span + 1) // 2
+        else:
+            raise ValueError(
+                "could not find a date window under result_limit within the per-call request "
+                "budget; retry with the same continuation token or raise result_limit"
+            )
+        qid = query_id(query)
+        next_start = end + timedelta(days=1)
+        token = _encode_token(qid, next_start, span) if next_start <= query.end_date else None
+        return CollectionPage(result, qid, start, end, token)
 
     @staticmethod
     def _measurement_result(
