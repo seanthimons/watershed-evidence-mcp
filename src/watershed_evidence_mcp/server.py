@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from urllib.parse import urlencode
-
 from mcp.server.fastmcp import FastMCP
 
 from watershed_evidence_mcp.adapters.attains import AttainsAdapter
 from watershed_evidence_mcp.adapters.freshwater import FreshwaterAdapter
 from watershed_evidence_mcp.adapters.waters import WatersAdapter
 from watershed_evidence_mcp.adapters.wqp import WqpAdapter
-from watershed_evidence_mcp.http import JsonHttpClient
 from watershed_evidence_mcp.models import (
     AssessmentContextQuery,
     BoundingBox,
@@ -234,23 +231,20 @@ async def wqp_vocab_search(
     """Discover exact, permissible WQP query values without silent fuzzy matching."""
     if not vocabulary.replace("_", "").isalnum():
         raise ValueError("vocabulary must contain only letters, digits, and underscores")
+    if not text.strip() or len(text) > 200:
+        raise ValueError("text must be nonblank and no longer than 200 characters")
     if not 1 <= page_size <= 100:
         raise ValueError("page_size must be between 1 and 100")
     if page_number < 1:
         raise ValueError("page_number must be at least 1")
 
-    params = {
-        "text": text,
-        "pagesize": str(page_size),
-        "pagenumber": str(page_number),
-        "mimeType": "json",
-    }
-    url = f"https://www.waterqualitydata.us/Codes/{vocabulary}"
-    payload = await JsonHttpClient().get_json(url, params)
-    query_url = f"{url}?{urlencode(params)}"
+    payload, query_url = await WqpAdapter().vocabulary_search(
+        vocabulary, text, page_size=page_size, page_number=page_number
+    )
     return {
         "vocabulary": vocabulary,
         "results": payload,
+        "no_matches": payload.get("recordCount", 0) == 0,
         "provenance": _provenance(
             "Water Quality Portal",
             "controlled vocabulary service",
