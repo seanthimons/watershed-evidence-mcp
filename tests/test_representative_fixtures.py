@@ -46,12 +46,13 @@ async def test_freshwater_fixture_exercises_bounded_adapter_without_network() ->
         )
     )
 
-    records, query_url = await adapter.predicted_conductivity(
+    records, query_url, truncated = await adapter.predicted_conductivity(
         BoundingBox(west=-84.1, south=39.1, east=-84.0, north=39.2), max_records=10
     )
 
     assert records == [payload["features"][0]["attributes"]]
-    assert "resultRecordCount=10" in query_url
+    assert truncated is False
+    assert "resultRecordCount=11" in query_url
 
 
 @pytest.mark.asyncio

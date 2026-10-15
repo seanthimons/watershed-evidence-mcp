@@ -21,7 +21,7 @@ class FreshwaterAdapter:
 
     async def predicted_conductivity(
         self, bounding_box: BoundingBox, max_records: int = 100
-    ) -> tuple[list[dict], str]:
+    ) -> tuple[list[dict], str, bool]:
         if not 1 <= max_records <= 1_000:
             raise ValueError("max_records must be between 1 and 1000")
         params = {
@@ -33,8 +33,10 @@ class FreshwaterAdapter:
             "spatialRel": "esriSpatialRelIntersects",
             "outFields": "COMID,StreamName,AvgPredEC,F50Pct_PL,FTYPE,FCODE",
             "returnGeometry": "false",
-            "resultRecordCount": str(max_records),
+            # One extra row distinguishes "exactly at cap" from "truncated".
+            "resultRecordCount": str(max_records + 1),
         }
         payload = await self.client.get_json(PREDICTED_CONDUCTIVITY_URL, params)
         records = [feature.get("attributes", {}) for feature in payload.get("features", [])]
-        return records, f"{PREDICTED_CONDUCTIVITY_URL}?{urlencode(params)}"
+        truncated = len(records) > max_records or bool(payload.get("exceededTransferLimit"))
+        return records[:max_records], f"{PREDICTED_CONDUCTIVITY_URL}?{urlencode(params)}", truncated
