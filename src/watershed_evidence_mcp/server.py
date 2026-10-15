@@ -199,11 +199,15 @@ async def get_assessment_context(query: AssessmentContextQuery) -> dict:
 )
 async def freshwater_screening_baseline(bounding_box: BoundingBox, max_records: int = 100) -> dict:
     """Retrieve the Explorer's predicted-background conductivity layer for a bounded area."""
-    records, query_url = await FreshwaterAdapter().predicted_conductivity(bounding_box, max_records)
+    records, query_url, truncated = await FreshwaterAdapter().predicted_conductivity(
+        bounding_box, max_records
+    )
     return {
         "evidence_type": "screening_baseline",
         "parameter": "predicted background conductivity",
         "returned_records": len(records),
+        "requested_max_records": max_records,
+        "truncated": truncated,
         "records": records,
         "screening_only": True,
         "provenance": _provenance(
