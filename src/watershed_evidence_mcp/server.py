@@ -193,22 +193,27 @@ async def get_assessment_context(query: AssessmentContextQuery) -> dict:
 
 @mcp.tool(
     description=(
-        "Retrieve EPA Freshwater Explorer predicted-background conductivity for a bounded area. "
+        "Retrieve EPA Freshwater Explorer predicted-background conductivity for a bounded area, "
+        "with stream-reach geometry as a GeoJSON FeatureCollection (EPSG:4326) keyed by COMID. "
         "This is a screening baseline, not a raw observation set or regulatory determination."
     )
 )
 async def freshwater_screening_baseline(bounding_box: BoundingBox, max_records: int = 100) -> dict:
     """Retrieve the Explorer's predicted-background conductivity layer for a bounded area."""
-    records, query_url, truncated = await FreshwaterAdapter().predicted_conductivity(
+    features, query_url, truncated = await FreshwaterAdapter().predicted_conductivity(
         bounding_box, max_records
     )
     return {
         "evidence_type": "screening_baseline",
         "parameter": "predicted background conductivity",
-        "returned_records": len(records),
+        "returned_records": len(features),
         "requested_max_records": max_records,
         "truncated": truncated,
-        "records": records,
+        "bounding_box": bounding_box.model_dump(mode="json"),
+        "crs": "EPSG:4326",
+        "records_without_geometry": sum(f["geometry"] is None for f in features),
+        "records": [f["properties"] for f in features],
+        "feature_collection": {"type": "FeatureCollection", "features": features},
         "screening_only": True,
         "provenance": _provenance(
             "U.S. EPA Freshwater Explorer 2.0",
