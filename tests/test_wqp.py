@@ -6,7 +6,7 @@ import pytest
 from watershed_evidence_mcp.adapters.wqp import WqpAdapter, normalize_result_row
 from watershed_evidence_mcp.http import JsonHttpClient, UpstreamServiceError
 from watershed_evidence_mcp.models import BoundingBox, QueryScope, WqpQuery
-from watershed_evidence_mcp.server import wqp_vocab_search
+from watershed_evidence_mcp.tools.wqp import wqp_vocab_search
 
 
 def valid_query() -> WqpQuery:

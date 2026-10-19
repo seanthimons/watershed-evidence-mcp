@@ -49,6 +49,10 @@ Use an MCP client configured for stdio, for example:
 }
 ```
 
+## Remote (HTTP) mode
+
+Set `PORT` (or `MCP_TRANSPORT=streamable-http`, optionally `MCP_HOST`/`MCP_PORT`) to serve MCP at `/mcp` with a `/health` check; otherwise the server uses stdio. A stray `PORT` exported in your shell switches a local run to HTTP; unset it for stdio clients. Without `PORT`, HTTP mode binds `127.0.0.1` unless `MCP_HOST` is set. The `Dockerfile` builds this mode. The endpoint is unauthenticated; see [`SECURITY.md`](SECURITY.md). The server also exposes an `investigate_waterbody` prompt (the recommended evidence workflow) and `watershed://evidence-types` / `watershed://caveats` resources.
+
 ## Hackathon demo
 
 The presentation-grade Little Miami River near Milford flow is documented in
