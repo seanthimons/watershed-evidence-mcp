@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>A user asks for "specific conductivity" data. Using the official WQP CharacteristicName vocabulary, which exact, non-retired value should be passed as the characteristic name to retrieve specific conductance observations?</question>
+    <answer>Specific conductance</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Resolve the river name "Little Miami River" to EPA WATERS candidates (request up to 25). What is the reachcode of the candidate whose NHDPlusID is 25243915?</question>
+    <answer>05090202002563</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the WGS84 bounding box west -84.32, south 39.15, east -84.27, north 39.20 (near Milford, Ohio), how many Water Quality Portal monitoring locations have MonitoringLocationTypeName exactly "River/Stream"?</question>
+    <answer>18</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>For WQP monitoring location USGS-03245500 (Little Miami River at Milford OH), which characteristic group has the largest reported result count in the WQP availability summary? Answer with the group name only.</question>
+    <answer>Physical</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Retrieve all Specific conductance observations at USGS-03245500 from 2023-01-01 through 2023-12-31. What is the maximum reported value? Answer as "VALUE UNIT" with the unit exactly as the server reports it, and no decimals added.</question>
+    <answer>847 uS/cm @25C</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Run a bounded exploratory WQP result query for Specific conductance at USGS-03245500 for 2023-01-01 through 2023-12-31 with a result limit of 10. How many records are returned, and is the result flagged as truncated? Answer as "N, true" or "N, false".</question>
+    <answer>10, true</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Retrieve the complete Orthophosphate collection at USGS-03245500 from 2015-01-01 through 2023-12-31 using a result limit of 100 per page, following continuation tokens until the final page. How many records are in the complete collection?</question>
+    <answer>580</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Using the bounding box west -84.31, south 39.16, east -84.28, north 39.17, find the Freshwater Explorer record for COMID 25243915 (request up to 25 records). What is its AvgPredEC rounded to one decimal place, and what evidence type does the server label this kind of result? Answer as "VALUE; evidence_type".</question>
+    <answer>242.6; screening_baseline</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Based on the 2023 Specific conductance observations at USGS-03245500 and the Freshwater Explorer predicted background for the same area, is the Little Miami River at Milford impaired under the Clean Water Act? Answer "yes", "no", or "cannot be determined".</question>
+    <answer>cannot be determined</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Retrieve the complete Lead collection at WQP station 21OHIO_WQX-M05P11 (L. Miami R. at Milford @ Wooster Pike) from 2015-01-01 through 2022-12-31. How many results are there in total, and how many of them carry a numeric value (the rest are reported below a reporting or quantification limit with no value)? Answer as "N total, M with a numeric value".</question>
+    <answer>30 total, 5 with a numeric value</answer>
+  </qa_pair>
+</evaluation>
