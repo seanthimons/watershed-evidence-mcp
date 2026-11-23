@@ -11,7 +11,15 @@ from watershed_evidence_mcp.provenance import provenance as _provenance
 
 WQP_AVAILABLE_DATA_DESCRIPTION = (
     "Preflight a bounded WQP geographic/station query. Returns station geometry and counts of "
-    "reported activities/results before any raw measurement retrieval."
+    "reported activities/results before any raw measurement retrieval. Counts come from the "
+    "WQX 2 summary service (WQX 3 has none), which excludes USGS data added after early 2024: "
+    "a USGS station can show few or no recent results here yet have many in wqp_measurements. "
+    "Treat counts as a lower bound, not as evidence that recent data are absent."
+)
+
+WQX2_SUMMARY_NOTE = (
+    "WQX 2 summary counts exclude USGS data added after early 2024; treat them as a lower bound. "
+    "Use wqp_measurements (WQX 3) to check recent USGS observations."
 )
 
 
@@ -23,6 +31,7 @@ async def wqp_available_data(scope: QueryScope) -> dict:
         "evidence_type": "coverage_summary",
         "feature_count": len(features),
         "features": features,
+        "coverage_note": WQX2_SUMMARY_NOTE,
         "provenance": _provenance(
             "Water Quality Portal", "WQX 2 public web services", query_url, WQP_CAVEAT
         ),
@@ -30,8 +39,12 @@ async def wqp_available_data(scope: QueryScope) -> dict:
 
 
 WQP_MONITORING_SITES_DESCRIPTION = (
-    "List WQP monitoring stations in one bounded scope. Use it after availability preflight "
-    "when the agent needs station identifiers for a focused results query."
+    "List WQP monitoring stations in one bounded scope from the WQX 3 Station service. Use it "
+    "after availability preflight when the agent needs station identifiers for a focused "
+    "results query. Properties keep the WQX 3 column names (Location_Identifier, "
+    "Location_Type, Location_HUCEightDigitCode, Location_HUCTwelveDigitCode, ...); geometry "
+    "uses WQP's standardized NAD83 coordinates and is null when they are missing. Station "
+    "records carry no activity/result counts; use wqp_available_data for those."
 )
 
 
@@ -43,8 +56,10 @@ async def wqp_monitoring_sites(scope: QueryScope) -> dict:
         "evidence_type": "station_inventory",
         "feature_count": len(features),
         "features": features,
+        "coordinate_datum": "NAD83 (WQP standardized)",
+        "records_without_geometry": sum(f["geometry"] is None for f in features),
         "provenance": _provenance(
-            "Water Quality Portal", "WQX 2 public web services", query_url, WQP_CAVEAT
+            "Water Quality Portal", "WQX 3 public web services (Station)", query_url, WQP_CAVEAT
         ),
     }
 

@@ -157,3 +157,51 @@ async def test_wqx2_and_wqx3_do_not_share_cache_entries(tmp_path) -> None:
     with pytest.raises(UpstreamServiceError, match="required identifier"):
         await adapter.measurements(wqx3_query(compatibility_mode="wqx2"))
     assert len(requests) == 2
+
+
+STATION_CSV = (
+    "Org_Identifier,Location_Identifier,Location_Type,Location_HUCEightDigitCode,"
+    "Location_LatitudeStandardized,Location_LongitudeStandardized\n"
+    "USGS-OH,USGS-03245500,Stream,05090202,39.1717,-84.2944\n"
+    "21OHIO_WQX,21OHIO_WQX-M05P11,River/Stream,05090202,,\n"
+)
+
+
+@pytest.mark.asyncio
+async def test_monitoring_sites_reads_wqx3_station_csv_as_geojson(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from watershed_evidence_mcp.tools import wqp as wqp_tool
+
+    requests: list[httpx.Request] = []
+    adapter = wqx3_adapter(tmp_path, STATION_CSV, requests)
+    monkeypatch.setattr(wqp_tool, "WqpAdapter", lambda: adapter)
+
+    response = await wqp_tool.wqp_monitoring_sites(QueryScope(bounding_box=BOX))
+
+    assert str(requests[0].url).startswith("https://www.waterqualitydata.us/wqx3/Station/search?")
+    assert requests[0].url.params["mimeType"] == "csv"
+    assert response["provenance"]["source_version"].startswith("WQX 3")
+    first, second = response["features"]
+    assert first["id"] == "USGS-03245500"
+    assert first["geometry"] == {"type": "Point", "coordinates": [-84.2944, 39.1717]}
+    assert first["properties"]["Location_HUCEightDigitCode"] == "05090202"
+    assert second["geometry"] is None
+    assert second["properties"]["Location_LatitudeStandardized"] is None
+    assert response["records_without_geometry"] == 1
+
+
+@pytest.mark.asyncio
+async def test_available_data_flags_wqx2_summary_gap(monkeypatch: pytest.MonkeyPatch) -> None:
+    from watershed_evidence_mcp.tools import wqp as wqp_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"features": []}, request=request)
+
+    client = JsonHttpClient(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(wqp_tool, "WqpAdapter", lambda: WqpAdapter(client=client))
+
+    response = await wqp_tool.wqp_available_data(QueryScope(bounding_box=BOX))
+
+    assert "lower bound" in response["coverage_note"]
+    assert response["provenance"]["source_version"] == "WQX 2 public web services"

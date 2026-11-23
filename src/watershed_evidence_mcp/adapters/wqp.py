@@ -139,7 +139,8 @@ class WqpAdapter:
     @classmethod
     def site_parameters(cls, scope: QueryScope) -> dict[str, str]:
         parameters = cls._scope_parameters(scope)
-        parameters.update({"mimeType": "geojson", "zip": "no"})
+        # WQX 3 Station search serves CSV only.
+        parameters.update({"mimeType": "csv", "zip": "no"})
         return parameters
 
     @classmethod
@@ -187,9 +188,22 @@ class WqpAdapter:
         return await self.client.get_json(url, params), query_url
 
     async def monitoring_sites(self, scope: QueryScope) -> tuple[dict, str]:
+        """WQX 3 station inventory as a GeoJSON FeatureCollection (NAD83 standardized coords)."""
         params = self.site_parameters(scope)
-        url = f"{WQP_BASE_URL}/Station/search"
-        return await self.client.get_json(url, params), self.url("Station/search", params)
+        url = f"{WQX3_BASE_URL}/Station/search"
+        text = await self.client.get_text(
+            url, params, expected_content_types=("text/csv", "application/csv", "text/plain")
+        )
+        reader = csv.DictReader(StringIO(text))
+        if reader.fieldnames is None or "Location_Identifier" not in reader.fieldnames:
+            raise UpstreamServiceError(
+                "WQP returned station CSV without Location_Identifier; retry later"
+            )
+        features = [station_feature(row) for row in reader]
+        return (
+            {"type": "FeatureCollection", "features": features},
+            self.url("Station/search", params, WQX3_BASE_URL),
+        )
 
     async def measurements(self, query: WqpQuery) -> MeasurementResult:
         mode = query.compatibility_mode
@@ -303,6 +317,23 @@ class WqpAdapter:
             truncated=truncated,
             continuation=continuation,
         )
+
+
+def station_feature(row: Mapping[str, str]) -> dict:
+    """Keep every WQX 3 station column; geometry is None when standardized coords are absent."""
+    properties = {key: (value or None) for key, value in row.items()}
+    try:
+        lon = float(row["Location_LongitudeStandardized"])
+        lat = float(row["Location_LatitudeStandardized"])
+        geometry = {"type": "Point", "coordinates": [lon, lat]}
+    except (KeyError, TypeError, ValueError):
+        geometry = None
+    return {
+        "type": "Feature",
+        "id": properties.get("Location_Identifier"),
+        "geometry": geometry,
+        "properties": properties,
+    }
 
 
 def normalize_result_row(row: Mapping[str, str]) -> dict[str, str | None]:

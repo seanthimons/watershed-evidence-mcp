@@ -8,8 +8,8 @@
     <answer>05090202002563</answer>
   </qa_pair>
   <qa_pair>
-    <question>In the WGS84 bounding box west -84.32, south 39.15, east -84.27, north 39.20 (near Milford, Ohio), how many Water Quality Portal monitoring locations have MonitoringLocationTypeName exactly "River/Stream"?</question>
-    <answer>18</answer>
+    <question>In the WGS84 bounding box west -84.32, south 39.15, east -84.27, north 39.20 (near Milford, Ohio), how many Water Quality Portal monitoring locations have a location type (Location_Type) of exactly "River/Stream"?</question>
+    <answer>17</answer>
   </qa_pair>
   <qa_pair>
     <question>For WQP monitoring location USGS-03245500 (Little Miami River at Milford OH), which characteristic group has the largest reported result count in the WQP availability summary? Answer with the group name only.</question>
