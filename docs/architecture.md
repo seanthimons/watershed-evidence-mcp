@@ -35,4 +35,4 @@ Measurement responses are stored in a local DuckDB cache. The key is a SHA-256 d
 
 ## Compatibility
 
-WQP legacy WQX 2 endpoints are the default. `compatibility_mode="wqx3"` is an explicit adapter boundary but fails safely until the active WQX 3 schema is validated against the provenance-preserving result contract; it never silently falls back to WQX 2.
+WQX 3 (`basicPhysChem` profile) is the default WQP mode; `compatibility_mode="wqx2"` selects the legacy WQX 2 endpoints. Each mode has its own normalizer that emits the same record keys without translating values; it never falls back to WQX 2. The two modes use distinct cache keys (source version and base URL), and a record-schema tag in the cache key keeps rows cached under an older record shape from being served. WQX 2 no longer receives USGS data added after early 2024.

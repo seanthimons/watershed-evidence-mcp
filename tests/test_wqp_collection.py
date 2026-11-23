@@ -32,6 +32,7 @@ def make(dates: list[date], tmp_path, limit: int, end: date = date(2024, 1, 8)):
         start_date=date(2024, 1, 1),
         end_date=end,
         result_limit=limit,
+        compatibility_mode="wqx2",  # DatedClient emits WQX 2 CSV
     )
     client = DatedClient(dates)
     return query, client, WqpAdapter(client=client, cache=DuckDbCache(tmp_path / "c.duckdb"))

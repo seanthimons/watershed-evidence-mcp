@@ -58,12 +58,12 @@ The command performs six public, read-only, bounded requests: WATERS name resolu
 - Public-source requests have a 20-second timeout, 10 MB body cap, content-type validation, bounded Pydantic inputs, and actionable upstream errors.
 - `ATTAINS_API_KEY` is only supplied at runtime as the documented header and is never included in provenance URLs, reports, fixtures, or tests.
 - Public records retain their source attribution, original identifiers, units, qualifiers, detection limits, method fields, and caveats. Their reuse terms can vary by contributor; users must check source-specific licensing before redistribution.
-- WQP retrieval is capped and says when a result may be incomplete. WQX 2 has no stable cursor in this adapter, so continuation means narrowing the date range, station selection, or characteristic set rather than assuming a global page sequence.
+- WQP retrieval is capped and says when a result may be incomplete. WQP has no stable cursor in this adapter, so continuation means narrowing the date range, station selection, or characteristic set rather than assuming a global page sequence.
 - Live outcomes are observations of an external service at one time, not availability guarantees or performance claims. ATTAINS can be rate-limited, and source schemas may change.
 
 ## Hardened-retrieval verified run
 
-Run from the repository with Python 3.11.15 on 2026-10-13 EDT. These are direct live-service results from the hardened WQX 2 adapter, not fixtures.
+Run from the repository with Python 3.11.15 on 2026-10-13 EDT. These are direct live-service results from the hardened WQX 2 adapter, not fixtures. WQX 3 became the default on 2026-11-23; the WQX 2 rows below are a historical record (WQX 3 reports units without the `@25C` suffix, for example).
 
 | Scenario | Input | Result | Wall-clock |
 | --- | --- | --- | --- |

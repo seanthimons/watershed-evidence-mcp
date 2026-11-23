@@ -17,7 +17,7 @@
   </qa_pair>
   <qa_pair>
     <question>Retrieve all Specific conductance observations at USGS-03245500 from 2023-01-01 through 2023-12-31. What is the maximum reported value? Answer as "VALUE UNIT" with the unit exactly as the server reports it, and no decimals added.</question>
-    <answer>847 uS/cm @25C</answer>
+    <answer>847 uS/cm</answer>
   </qa_pair>
   <qa_pair>
     <question>Run a bounded exploratory WQP result query for Specific conductance at USGS-03245500 for 2023-01-01 through 2023-12-31 with a result limit of 10. How many records are returned, and is the result flagged as truncated? Answer as "N, true" or "N, false".</question>

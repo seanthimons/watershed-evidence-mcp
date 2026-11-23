@@ -54,7 +54,10 @@ WQP_MEASUREMENTS_DESCRIPTION = (
     "spatial/station selector, exact WQP characteristic name(s), a date range, and "
     "a result cap. "
     "Preserves "
-    "units, qualifiers, detection limits, and method fields without harmonizing them."
+    "units, qualifiers, detection limits, sample fraction, result status, and method fields "
+    "without harmonizing them. compatibility_mode='wqx3' is the default; "
+    "'wqx2' (legacy) lacks USGS data added after early 2024. WQX 2 and WQX 3 vocabularies differ "
+    "(e.g. sample fraction 'Total' vs 'Unfiltered'); do not merge them as equivalent."
 )
 
 

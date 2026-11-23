@@ -11,6 +11,8 @@ def investigate_waterbody(river_name: str) -> str:
 
 1. resolve_waterbody: list candidates. If more than one, ask the user to choose; never guess.
 2. Agree an explicit spatial scope (bounding box, point/radius, or station IDs) and date range.
+   The selected candidate's huc8 is its whole subbasin (far wider than the reach, and a river
+   can cross several); use it as the WQP huc8 scope only if the user agrees to that breadth.
 3. wqp_available_data, then wqp_monitoring_sites: report what exists before fetching values.
 4. wqp_vocab_search: translate the user's parameter wording into an exact WQP characteristic.
 5. wqp_measurements for a sample; wqp_measurements_page only when a complete collection is

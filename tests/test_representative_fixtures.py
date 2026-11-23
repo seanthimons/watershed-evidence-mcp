@@ -77,6 +77,7 @@ async def test_wqp_fixture_preserves_raw_evidence_fields_without_network(tmp_pat
             start_date=date(1970, 1, 1),
             end_date=date(1980, 1, 1),
             result_limit=25,
+            compatibility_mode="wqx2",  # fixture is a WQX 2 CSV
         )
     )
 

@@ -27,6 +27,7 @@ def valid_query(result_limit: int = 1) -> WqpQuery:
         start_date=date(2024, 1, 1),
         end_date=date(2024, 12, 31),
         result_limit=result_limit,
+        compatibility_mode="wqx2",  # fixtures below are WQX 2 CSV
     )
 
 
