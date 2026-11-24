@@ -35,9 +35,9 @@ async def resolve_watershed(
             f"box sides must be at most {MAX_SIDE_DEGREES} degrees; draw a smaller box"
         )
 
-    candidates, truncated, query_url = await WbdAdapter().resolve_box(box, level)
+    candidates, skipped, truncated, query_url = await WbdAdapter().resolve_box(box, level)
     warning = None
-    if not candidates:
+    if not candidates and not skipped:
         warning = "No watershed intersects this box (outside WBD coverage, e.g. open ocean)."
     elif truncated:
         warning = (
@@ -46,10 +46,14 @@ async def resolve_watershed(
         )
     elif len(candidates) > 1:
         warning = "The box straddles more than one watershed; ask the user to select one."
+    if skipped:
+        note = f"{skipped} malformed WBD record(s) were skipped; the list may be incomplete."
+        warning = f"{warning} {note}" if warning else note
     return WatershedResolution(
         query_box=box,
         level=level,
         candidates=candidates,
+        skipped_records=skipped,
         truncated=truncated,
         warning=warning,
         provenance=Provenance(

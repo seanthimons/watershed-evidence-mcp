@@ -5,7 +5,7 @@ from __future__ import annotations
 from mcp.server.fastmcp import FastMCP
 
 from watershed_evidence_mcp.adapters.wqp import WqpAdapter
-from watershed_evidence_mcp.models import QueryScope, WqpQuery
+from watershed_evidence_mcp.models import CompatibilityMode, QueryScope, WqpQuery
 from watershed_evidence_mcp.provenance import VOCAB_CAVEAT, WQP_CAVEAT
 from watershed_evidence_mcp.provenance import provenance as _provenance
 
@@ -38,28 +38,45 @@ async def wqp_available_data(scope: QueryScope) -> dict:
     }
 
 
+WQX_MODE_RULE = (
+    "Choose compatibility_mode deliberately; the server never switches or falls back. "
+    "Use 'wqx3' (default) for new analysis and for any USGS data from 2024 onward. Use 'wqx2' "
+    "only to reproduce an earlier WQX 2 result, to compare with prior work that used WQX 2 "
+    "vocabulary, or (measurements) when laboratory_name is required. If one mode fails, report "
+    "the failure; a retry in the other mode returns different vocabulary and must be labelled. "
+)
+
 WQP_MONITORING_SITES_DESCRIPTION = (
     "List WQP monitoring stations in one bounded scope from the WQX 3 Station service. Use it "
     "after availability preflight when the agent needs station identifiers for a focused "
     "results query. Properties keep the WQX 3 column names (Location_Identifier, "
     "Location_Type, Location_HUCEightDigitCode, Location_HUCTwelveDigitCode, ...); geometry "
     "uses WQP's standardized NAD83 coordinates and is null when they are missing. Station "
-    "records carry no activity/result counts; use wqp_available_data for those."
+    "records carry no activity/result counts; use wqp_available_data for those. "
+    "compatibility_mode='wqx2' returns the legacy WQX 2 GeoJSON instead (MonitoringLocation* "
+    "property names, per-station counts, no USGS stations added after early 2024). " + WQX_MODE_RULE
 )
 
 
-async def wqp_monitoring_sites(scope: QueryScope) -> dict:
+async def wqp_monitoring_sites(
+    scope: QueryScope, compatibility_mode: CompatibilityMode = "wqx3"
+) -> dict:
     """Retrieve WQP station inventory as GeoJSON for one bounded scope."""
-    payload, query_url = await WqpAdapter().monitoring_sites(scope)
+    payload, query_url = await WqpAdapter().monitoring_sites(scope, compatibility_mode)
     features = payload.get("features", [])
+    wqx3 = compatibility_mode == "wqx3"
     return {
         "evidence_type": "station_inventory",
+        "compatibility_mode": compatibility_mode,
         "feature_count": len(features),
         "features": features,
-        "coordinate_datum": "NAD83 (WQP standardized)",
-        "records_without_geometry": sum(f["geometry"] is None for f in features),
+        "coordinate_datum": "NAD83 (WQP standardized)" if wqx3 else "as served by WQP WQX 2",
+        "records_without_geometry": sum(f.get("geometry") is None for f in features),
         "provenance": _provenance(
-            "Water Quality Portal", "WQX 3 public web services (Station)", query_url, WQP_CAVEAT
+            "Water Quality Portal",
+            "WQX 3 public web services (Station)" if wqx3 else "WQX 2 public web services",
+            query_url,
+            WQP_CAVEAT,
         ),
     }
 
@@ -72,7 +89,8 @@ WQP_MEASUREMENTS_DESCRIPTION = (
     "units, qualifiers, detection limits, sample fraction, result status, and method fields "
     "without harmonizing them. compatibility_mode='wqx3' is the default; "
     "'wqx2' (legacy) lacks USGS data added after early 2024. WQX 2 and WQX 3 vocabularies differ "
-    "(e.g. sample fraction 'Total' vs 'Unfiltered'); do not merge them as equivalent."
+    "(e.g. sample fraction 'Total' vs 'Unfiltered'); do not merge them as equivalent. "
+    + WQX_MODE_RULE
 )
 
 
@@ -105,7 +123,8 @@ WQP_MEASUREMENTS_PAGE_DESCRIPTION = (
     "time. Call with no continuation_token first, then pass each response's "
     "collection.continuation_token until it is null. The collection is complete only when "
     "every page from the first to the final one was retrieved. Use wqp_measurements for a "
-    "bounded exploratory sample instead."
+    "bounded exploratory sample instead. Keep one compatibility_mode for every page. "
+    + WQX_MODE_RULE
 )
 
 

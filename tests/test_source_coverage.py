@@ -205,3 +205,34 @@ async def test_available_data_flags_wqx2_summary_gap(monkeypatch: pytest.MonkeyP
 
     assert "lower bound" in response["coverage_note"]
     assert response["provenance"]["source_version"] == "WQX 2 public web services"
+
+
+@pytest.mark.asyncio
+async def test_monitoring_sites_wqx2_mode_uses_legacy_geojson(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from watershed_evidence_mcp.tools import wqp as wqp_tool
+
+    requests: list[httpx.Request] = []
+    feature = {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [-84.29, 39.17]},
+        "properties": {"MonitoringLocationIdentifier": "USGS-03245500", "resultCount": "17875"},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"features": [feature]}, request=request)
+
+    client = JsonHttpClient(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(wqp_tool, "WqpAdapter", lambda: WqpAdapter(client=client))
+
+    response = await wqp_tool.wqp_monitoring_sites(
+        QueryScope(bounding_box=BOX), compatibility_mode="wqx2"
+    )
+
+    assert str(requests[0].url).startswith("https://www.waterqualitydata.us/data/Station/search?")
+    assert requests[0].url.params["mimeType"] == "geojson"
+    assert response["compatibility_mode"] == "wqx2"
+    assert response["features"] == [feature]
+    assert response["provenance"]["source_version"] == "WQX 2 public web services"
