@@ -21,6 +21,17 @@ FRESHWATER_CAVEAT = (
     "calibration. Do not represent them as current raw observations or a "
     "regulatory finding."
 )
+FRESHWATER_CRITERIA_CAVEAT = (
+    "Station-level aquatic-life criteria values calculated by EPA from local water-chemistry "
+    "percentiles, for screening context. They are not state-adopted water-quality standards, "
+    "exceedance determinations, or impairment findings. Units and method are defined in the "
+    "Freshwater Explorer documentation, not in this layer."
+)
+WBD_CAVEAT = (
+    "Watersheds are the USGS/NRCS Watershed Boundary Dataset units that spatially intersect the "
+    "drawn box. Intersection is not containment: a river or station may lie in only one of them. "
+    "This is a lookup aid, not a determination."
+)
 VOCAB_CAVEAT = (
     "Vocabulary results are the source of exact query values; do not silently "
     "substitute near matches."
@@ -31,6 +42,8 @@ CAVEATS = {
     "waters": WATERS_CAVEAT,
     "attains": ATTAINS_CAVEAT,
     "freshwater": FRESHWATER_CAVEAT,
+    "freshwater_criteria": FRESHWATER_CRITERIA_CAVEAT,
+    "wbd": WBD_CAVEAT,
     "vocabulary": VOCAB_CAVEAT,
 }
 

@@ -24,6 +24,8 @@ def feature_to_candidate(feature: dict) -> WaterbodyCandidate:
         bounding_box = BoundingBox(
             west=min(longitudes), south=min(latitudes), east=max(longitudes), north=max(latitudes)
         )
+    reachcode = attributes.get("REACHCODE") or attributes.get("reachcode")
+    reachcode = str(reachcode) if reachcode else None
     return WaterbodyCandidate(
         name=(
             attributes.get("GNIS_NAME")
@@ -31,9 +33,8 @@ def feature_to_candidate(feature: dict) -> WaterbodyCandidate:
             or attributes.get("GNISName")
             or "Unnamed waterbody"
         ),
-        reachcode=str(attributes.get("REACHCODE") or attributes.get("reachcode"))
-        if attributes.get("REACHCODE") or attributes.get("reachcode")
-        else None,
+        reachcode=reachcode,
+        huc8=reachcode[:8] if reachcode and len(reachcode) == 14 and reachcode.isdigit() else None,
         nhdplusid=str(attributes.get("NHDPLUSID") or attributes.get("nhdplusid"))
         if attributes.get("NHDPLUSID") or attributes.get("nhdplusid")
         else None,

@@ -31,6 +31,25 @@ class BoundingBox(BaseModel):
     def wqp_value(self) -> str:
         return f"{self.west},{self.south},{self.east},{self.north}"
 
+    @classmethod
+    def from_corners(cls, a: GeoPoint, b: GeoPoint) -> BoundingBox:
+        """Two opposite corners in any order, as produced by dragging a box on a map."""
+        if a.latitude == b.latitude or a.longitude == b.longitude:
+            raise ValueError("corners must differ in both latitude and longitude")
+        return cls(
+            west=min(a.longitude, b.longitude),
+            south=min(a.latitude, b.latitude),
+            east=max(a.longitude, b.longitude),
+            north=max(a.latitude, b.latitude),
+        )
+
+
+class GeoPoint(BaseModel):
+    """One WGS84 corner of a drawn box."""
+
+    latitude: Latitude
+    longitude: Longitude
+
 
 class PointRadius(BaseModel):
     latitude: Latitude
@@ -49,6 +68,8 @@ class Provenance(BaseModel):
 class WaterbodyCandidate(BaseModel):
     name: str
     reachcode: str | None = None
+    # First 8 digits of the 14-digit NHD reachcode: the containing subbasin, not the reach.
+    huc8: Annotated[str | None, Field(pattern=r"^\d{8}$")] = None
     nhdplusid: str | None = None
     geometry_type: str | None = None
     bounding_box: BoundingBox | None = None
@@ -59,6 +80,26 @@ class WaterbodyResolution(BaseModel):
     query: str
     candidates: list[WaterbodyCandidate]
     ambiguity_warning: str | None = None
+    provenance: Provenance
+
+
+HucLevel = Literal["huc8", "huc12"]
+
+
+class WatershedCandidate(BaseModel):
+    # Fits QueryScope.huc8 / AssessmentContextQuery.huc12 directly.
+    huc: Annotated[str, Field(pattern=r"^(\d{8}|\d{12})$")]
+    name: str | None = None
+    area_sq_km: float | None = None
+    states: str | None = None  # raw upstream string, e.g. "OH,IN"
+
+
+class WatershedResolution(BaseModel):
+    query_box: BoundingBox
+    level: HucLevel
+    candidates: list[WatershedCandidate]
+    truncated: bool = False
+    warning: str | None = None
     provenance: Provenance
 
 
@@ -106,7 +147,7 @@ class WqpQuery(BaseModel):
     end_date: date
     sample_media: Literal["Water", "Sediment", "Biological", "Soil", "Tissue", "Other"] = "Water"
     result_limit: Annotated[int, Field(ge=1, le=10_000)] = 1_000
-    compatibility_mode: Literal["wqx2", "wqx3"] = "wqx2"
+    compatibility_mode: Literal["wqx2", "wqx3"] = "wqx3"
 
     @model_validator(mode="after")
     def valid_dates(self) -> WqpQuery:
