@@ -7,6 +7,7 @@ from watershed_evidence_mcp.server import mcp
 
 EXPECTED_TOOLS = {
     "resolve_waterbody",
+    "resolve_watershed",
     "wqp_available_data",
     "wqp_monitoring_sites",
     "wqp_measurements",

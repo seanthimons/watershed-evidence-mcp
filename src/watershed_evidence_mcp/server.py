@@ -21,7 +21,8 @@ mcp = FastMCP(
     name="Watershed Evidence",
     instructions=(
         "Use this read-only server to retrieve public U.S. water-quality evidence. "
-        "Resolve a named river before creating a geographic query. Use wqp_available_data "
+        "Resolve a named river, or a two-corner box via resolve_watershed, before creating a "
+        "geographic query. Use wqp_available_data "
         "before wqp_measurements. Never present Freshwater Explorer screening context or "
         "WQP observations as a regulatory determination."
     ),

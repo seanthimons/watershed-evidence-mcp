@@ -10,6 +10,7 @@ Tools represent a domain action an agent can select correctly, rather than a thi
 - `models.py`: Pydantic input contracts and evidence/provenance types.
 - `adapters/wqp.py`: WQP parameter construction, call policy, and response normalization.
 - `adapters/waters.py`: EPA WATERS GeoViewer river-name resolution.
+- `adapters/wbd.py`: USGS Watershed Boundary Dataset lookup from a two-corner box to HUC8/HUC12.
 - `adapters/freshwater.py`: Freshwater Explorer screening-only adapter.
 - `adapters/attains.py`: ATTAINS assessment-context adapter with explicit API-key handling.
 - `http.py`: injectable HTTP boundary.

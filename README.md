@@ -20,8 +20,20 @@ WQX Web's API supports authenticated data-submission workflows. Public retrieval
 ```text
 resolve_waterbody → wqp_available_data → wqp_monitoring_sites → wqp_measurements
                                       ↘ freshwater_screening_baseline
+two box corners → resolve_watershed → HUC8 → (any wqp_* huc8 scope)
+                                    ↘ HUC12 → get_assessment_context
 assessment-unit ID or HUC12 ───────────────→ get_assessment_context
 ```
+
+### Start from a place you know
+
+If you know where the river is but not what it is called, drag a box around it and send two opposite corners to `resolve_watershed`:
+
+```json
+{"name":"resolve_watershed","arguments":{"corner_1":{"latitude":39.30,"longitude":-84.20},"corner_2":{"latitude":39.10,"longitude":-84.40},"level":"huc8"}}
+```
+
+The corners can be in any order. The tool returns the USGS Watershed Boundary Dataset units that intersect the box (HUC12 by default, HUC8 with `level`), with each unit's name, area, and states, up to 50 (a truncation warning appears beyond that). A box that straddles a watershed boundary returns every unit it touches; you choose one. Boxes are limited to 0.5° per side, so a box crossing the antimeridian is rejected, and a flat box (both corners on one latitude or longitude) is rejected too. The result is a lookup aid: intersecting a box does not mean a river or station lies inside the watershed.
 
 The server uses the summary endpoint before raw-result retrieval. `wqp_measurements` requires a specific characteristic plus a bounded date range and either selected sites, a bounding box, or a point/radius. Use `wqp_vocab_search` to translate a user phrase into an exact WQP controlled-vocabulary value before supplying it to `wqp_measurements`.
 
@@ -69,6 +81,7 @@ uv run python scripts/run_little_miami_demo.py
 - Every successful upstream response includes query URL(s), retrieval timestamp, source/version, and a data-use caveat.
 - It never labels a screening baseline as a regulatory conclusion.
 - It does not infer a river corridor from a name alone: `resolve_waterbody` returns candidates and the caller must choose one.
+- `resolve_watershed` takes two opposite corners (latitude/longitude, any order; each side at most 0.5°) and returns the USGS WBD HUC8 or HUC12 units that intersect the box. Intersection is not containment; a box that straddles several watersheds returns all of them and the caller must choose.
 - It preserves original identifiers, units, qualifiers, and source fields.
 - `wqp_measurements` uses a local DuckDB cache keyed by normalized parameters, endpoint, source, and source version. Entries have a one-hour TTL; expired entries are deleted on lookup, and a source-version change creates a distinct cache key.
 - ATTAINS calls require a free Data.gov API key supplied at runtime as `ATTAINS_API_KEY`; the adapter sends it only as the documented `X-Api-Key` header, never embeds or logs it, and never includes it in returned provenance URLs. It resolves each requested assessment unit through ATTAINS to obtain authoritative organization IDs before retrieving assessment decisions, rather than inferring a state from an identifier prefix. HUC12 retrieval remains bounded to 50 resolved organization/unit pairs. Missing configuration fails before a network request with the registration URL.
@@ -87,6 +100,7 @@ uv run python scripts/run_little_miami_demo.py
 - [WQP modernization / WQX 3 reference](https://www.epa.gov/waterdata/water-quality-portal-modernization-quick-reference-guide)
 - [EPA Freshwater Explorer](https://www.epa.gov/water-research/freshwater-explorer)
 - [EPA ATTAINS Web Services](https://www.epa.gov/waterdata/how-access-and-use-attains-web-services)
+- [USGS Watershed Boundary Dataset MapServer](https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer)
 - [EPA WATERS GeoViewer surface-water layer](https://watersgeo.epa.gov/arcgis/rest/services/OWOTHER/WATERS_GeoViewer_SurfaceWater/MapServer/1)
 
 ## Current scope
