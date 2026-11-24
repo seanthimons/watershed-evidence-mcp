@@ -18,8 +18,9 @@ WQX Web's API supports authenticated data-submission workflows. Public retrieval
 ## Tool flow
 
 ```text
-resolve_waterbody → wqp_available_data → wqp_monitoring_sites → wqp_measurements
-                                      ↘ freshwater_screening_baseline
+resolve_waterbody → wqp_available_data → wqp_monitoring_sites → wqp_measurements → wqp_measurements_page
+                                      ↘ freshwater_screening_baseline               (complete collection)
+wqp_vocab_search ──→ exact characteristic name, supplied to wqp_measurements
 two box corners → resolve_watershed → HUC8 → (any wqp_* huc8 scope)
                                     ↘ HUC12 → get_assessment_context
 assessment-unit ID or HUC12 ───────────────→ get_assessment_context
@@ -106,7 +107,9 @@ uv run python scripts/run_little_miami_demo.py
 
 ## Current scope
 
-The initial implementation supports WQP public station summaries, station inventory, exact-characteristic measurement retrieval, vocabulary discovery, and river-name candidate resolution. ### Bounded sample vs. complete collection
+The server supports WQP public station summaries, station inventory, exact-characteristic measurement retrieval (bounded sample or complete paged collection), vocabulary discovery, river-name candidate resolution, box-to-watershed (HUC8/HUC12) resolution, Freshwater Explorer screening layers, and ATTAINS assessment context.
+
+### Bounded sample vs. complete collection
 
 - `wqp_measurements` is a **bounded exploratory sample**: at most `result_limit` rows, `truncated: true` when the cap is reached. Never present it as a complete dataset.
 - `wqp_measurements_page` retrieves a **complete, explicitly defined collection** (stations/area, exact characteristics, date range) as contiguous date-window pages. WQP has no stable cursor and unsorted results, so completeness is established per window: a window is returned only if the source gave fewer rows than `result_limit`; otherwise the window is halved (at most 12 upstream requests per call). A single day that still hits the cap raises an error rather than dropping records.

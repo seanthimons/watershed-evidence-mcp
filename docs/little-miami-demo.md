@@ -60,6 +60,8 @@ The script executes these calls in order. The prompts below are suitable for a c
    {"name":"wqp_monitoring_sites","arguments":{"scope":{"bounding_box":{"west":-84.32,"south":39.15,"east":-84.27,"north":39.20}}}}
    ```
 
+   The station inventory comes from the WQX 3 Station service, which was slow for this box on 2026-11-23: a direct request took 14 s to more than 60 s, and the 20-second client timeout fired twice before a third run succeeded. Retry on a timeout, and rehearse the demo beforehand (the station inventory is not cached, so a rehearsal does not warm it). The availability summary still comes from the WQX 2 summary service (WQX 3 has none), so its counts are a lower bound and exclude USGS data added after early 2024.
+
    Select the stream station `USGS-03245500` — *Little Miami River at Milford OH* — for the bounded observation request. Do not treat other returned wells, tributaries, or groundwater aggregates as mainstem Little Miami observations.
 
 4. **Retrieve bounded observations and screening context**
@@ -89,6 +91,7 @@ The script executes these calls in order. The prompts below are suitable for a c
 ## Failure and ambiguity behavior
 
 - **The river candidate is missing or differs:** stop. Pick a returned candidate and declare a new explicit scope; do not silently substitute a nearby reach.
+- **The station inventory times out:** the WQX 3 Station service is intermittently slow. Retry the call; do not substitute WQX 2 silently, and label any WQX 2 retry as such.
 - **WQP coverage is empty:** report that the selected scope has no returned coverage and do not infer a conductivity result. Narrow or move the scope deliberately.
 - **The observation request is truncated:** display `truncated: true` and narrow dates or retain only the selected station before requesting another bounded slice.
 - **Freshwater Explorer has no matching COMID:** keep its records as area-level screening context or say the selected reach was not matched. Do not invent a baseline.

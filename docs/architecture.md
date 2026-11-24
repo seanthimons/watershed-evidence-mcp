@@ -6,7 +6,12 @@ Tools represent a domain action an agent can select correctly, rather than a thi
 
 ## Layers
 
-- `server.py`: MCP-facing tool definitions and client-safe errors.
+- `server.py`: app wiring only: builds the FastMCP app, registers everything below, and picks stdio or streamable HTTP.
+- `tools/`: one module per source (`waters`, `watersheds`, `wqp`, `freshwater`, `attains`) holding the MCP tool definitions, client-safe errors, and evidence-type tagging.
+- `prompts/`: the `investigate_waterbody` prompt, the recommended evidence workflow.
+- `resources/`: the `watershed://evidence-types` and `watershed://caveats` reference resources.
+- `provenance.py`: per-source caveats and the provenance block attached to every tool response.
+- `routes.py`: the `/health` route, used only in HTTP mode.
 - `models.py`: Pydantic input contracts and evidence/provenance types.
 - `adapters/wqp.py`: WQP parameter construction, call policy, and response normalization.
 - `adapters/waters.py`: EPA WATERS GeoViewer river-name resolution.
@@ -14,6 +19,9 @@ Tools represent a domain action an agent can select correctly, rather than a thi
 - `adapters/freshwater.py`: Freshwater Explorer screening-only adapter.
 - `adapters/attains.py`: ATTAINS assessment-context adapter with explicit API-key handling.
 - `http.py`: injectable HTTP boundary.
+- `cache.py`: the DuckDB cache for bounded public-source responses.
+- `config.py`: runtime configuration loading (standard dotenv in the working directory).
+- `evaluation.py` and `demo.py`: the opt-in live evaluation and the Little Miami demo packet renderer, both run from `scripts/`.
 
 ## Query policy
 
