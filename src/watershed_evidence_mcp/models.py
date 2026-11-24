@@ -101,6 +101,7 @@ class WatershedResolution(BaseModel):
     query_box: BoundingBox
     level: HucLevel
     candidates: list[WatershedCandidate]
+    skipped_records: int = 0  # malformed upstream records left out of candidates
     truncated: bool = False
     warning: str | None = None
     provenance: Provenance

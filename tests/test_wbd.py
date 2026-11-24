@@ -111,3 +111,32 @@ async def test_exactly_half_a_degree_is_accepted_and_mcp_rejects_bad_latitude(mo
             {"corner_1": {"latitude": 95, "longitude": -84.4}, "corner_2": NE.model_dump()},
         )
     assert bad.isError
+
+
+@pytest.mark.asyncio
+async def test_malformed_records_are_skipped_and_counted_not_fatal(monkeypatch) -> None:
+    payload = {
+        "features": [
+            {"attributes": None},  # null attributes
+            {"attributes": {"huc12": "05090202"}},  # HUC8-length code at the HUC12 level
+            {"attributes": {"huc12": "05090202090X"}},  # not digits
+            {"attributes": {"huc12": "050902020902", "areasqkm": "n/a"}},  # bad area
+            *_features("050902020903"),
+        ]
+    }
+    _patch(monkeypatch, payload)
+
+    result = await tool.resolve_watershed(SW, NE)
+
+    assert [c["huc"] for c in result["candidates"]] == ["050902020903"]
+    assert result["skipped_records"] == 4
+    assert "4 malformed WBD record(s) were skipped" in result["warning"]
+
+
+@pytest.mark.asyncio
+async def test_all_records_skipped_does_not_claim_no_coverage(monkeypatch) -> None:
+    _patch(monkeypatch, {"features": [{"attributes": None}]})
+    result = await tool.resolve_watershed(SW, NE)
+    assert result["candidates"] == []
+    assert "open ocean" not in result["warning"]
+    assert "1 malformed WBD record(s) were skipped" in result["warning"]
