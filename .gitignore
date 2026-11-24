@@ -7,3 +7,9 @@ __pycache__/
 .env.*
 !.env.example
 evaluation-reports/
+
+# Rendered demo recordings (see demo/watershed.tape)
+demo/*.mp4
+demo/*.gif
+demo/*.webm
+demo/out/

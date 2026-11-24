@@ -10,7 +10,10 @@ rejected-unbounded-scope guardrail is covered by the unit tests instead.
 ## Verification record
 
 Answers were produced by calling the local MCP server over stdio against the live public
-services on 2026-10-19 (no model requests). They depend on historical, closed date ranges
+services on 2026-10-19 (no model requests). All 10 were re-checked with direct tool calls on
+2026-11-23, after WQX 3 became the default WQP mode, and every answer still held (Q7 was
+updated to the WQX 3 count of 614 earlier). Q8 returned `AvgPredEC` 242.578 for the
+COMID, with `truncated: false`. They depend on historical, closed date ranges
 and fixed identifiers, but upstream data can be revised or stations added:
 
 - Q3 (station-type count) and Q4 (largest group) are snapshots of the WQP inventory, which

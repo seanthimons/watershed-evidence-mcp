@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "watershed-evidence": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "--quiet", "watershed-evidence-mcp"]
+    }
+  }
+}

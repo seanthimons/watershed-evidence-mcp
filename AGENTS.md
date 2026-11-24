@@ -13,7 +13,9 @@ changes.
 
 ## Layout
 
-- `src/watershed_evidence_mcp/server.py`: MCP tool definitions and response shaping.
+- `src/watershed_evidence_mcp/server.py`: app wiring; picks stdio or HTTP and registers the modules below.
+- `src/watershed_evidence_mcp/tools/`: MCP tool definitions and response shaping, one module per source.
+- `src/watershed_evidence_mcp/prompts/`, `resources/`, `provenance.py`, `routes.py`: the guided prompt, reference resources, source caveats and provenance block, and the HTTP health route.
 - `src/watershed_evidence_mcp/models.py`: Pydantic input/output contracts and bounds.
 - `src/watershed_evidence_mcp/http.py`: injectable HTTP boundary and upstream errors.
 - `src/watershed_evidence_mcp/adapters/`: source-specific public API clients.
