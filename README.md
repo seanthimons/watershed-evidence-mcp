@@ -9,6 +9,8 @@ It helps an AI client answer bounded questions about a **river, watershed, or ar
 3. EPA Freshwater Explorer curated/modelled screening context.
 4. Assessment context from EPA ATTAINS.
 
+> **Disclaimer:** This is a hackathon prototype. It has not been reviewed or approved by the U.S. EPA, and the views expressed are the author's own, not the position or policy of the agency. Outputs are public-data retrieval, not regulatory determinations.
+
 This is an exploratory prototype for the [GSA MCP Server and AI Agent Government Hackathon](https://www.gsa.gov/artificial-intelligence/ai-community-of-practice/events-and-training/mcp-server-and-ai-agent-government-hackathon). It only calls public data services and performs no writes.
 
 ## Why not WQX Web?
