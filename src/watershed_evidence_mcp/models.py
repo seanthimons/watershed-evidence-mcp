@@ -12,6 +12,9 @@ Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
 
 
+CompatibilityMode = Literal["wqx2", "wqx3"]
+
+
 class BoundingBox(BaseModel):
     """WGS84 west, south, east, north spatial extent."""
 
@@ -147,7 +150,7 @@ class WqpQuery(BaseModel):
     end_date: date
     sample_media: Literal["Water", "Sediment", "Biological", "Soil", "Tissue", "Other"] = "Water"
     result_limit: Annotated[int, Field(ge=1, le=10_000)] = 1_000
-    compatibility_mode: Literal["wqx2", "wqx3"] = "wqx3"
+    compatibility_mode: CompatibilityMode = "wqx3"
 
     @model_validator(mode="after")
     def valid_dates(self) -> WqpQuery:

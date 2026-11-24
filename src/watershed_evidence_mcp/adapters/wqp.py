@@ -16,7 +16,7 @@ from urllib.parse import urlencode
 
 from watershed_evidence_mcp.cache import DuckDbCache
 from watershed_evidence_mcp.http import JsonHttpClient, UpstreamServiceError
-from watershed_evidence_mcp.models import QueryScope, WqpQuery
+from watershed_evidence_mcp.models import CompatibilityMode, QueryScope, WqpQuery
 
 WQP_BASE_URL = "https://www.waterqualitydata.us/data"
 WQX3_BASE_URL = "https://www.waterqualitydata.us/wqx3"
@@ -137,10 +137,13 @@ class WqpAdapter:
         return parameters
 
     @classmethod
-    def site_parameters(cls, scope: QueryScope) -> dict[str, str]:
+    def site_parameters(
+        cls, scope: QueryScope, compatibility_mode: CompatibilityMode = "wqx3"
+    ) -> dict[str, str]:
         parameters = cls._scope_parameters(scope)
-        # WQX 3 Station search serves CSV only.
-        parameters.update({"mimeType": "csv", "zip": "no"})
+        # WQX 3 Station search serves CSV only; WQX 2 serves GeoJSON directly.
+        mime = "csv" if compatibility_mode == "wqx3" else "geojson"
+        parameters.update({"mimeType": mime, "zip": "no"})
         return parameters
 
     @classmethod
@@ -187,9 +190,14 @@ class WqpAdapter:
         query_url = self.url("summary/monitoringLocation/search", params)
         return await self.client.get_json(url, params), query_url
 
-    async def monitoring_sites(self, scope: QueryScope) -> tuple[dict, str]:
-        """WQX 3 station inventory as a GeoJSON FeatureCollection (NAD83 standardized coords)."""
-        params = self.site_parameters(scope)
+    async def monitoring_sites(
+        self, scope: QueryScope, compatibility_mode: CompatibilityMode = "wqx3"
+    ) -> tuple[dict, str]:
+        """Station inventory as GeoJSON; WQX 3 rows are converted with NAD83 standardized coords."""
+        params = self.site_parameters(scope, compatibility_mode)
+        if compatibility_mode == "wqx2":
+            url = f"{WQP_BASE_URL}/Station/search"
+            return await self.client.get_json(url, params), self.url("Station/search", params)
         url = f"{WQX3_BASE_URL}/Station/search"
         text = await self.client.get_text(
             url, params, expected_content_types=("text/csv", "application/csv", "text/plain")
