@@ -25,7 +25,7 @@
   </qa_pair>
   <qa_pair>
     <question>Retrieve the complete Orthophosphate collection at USGS-03245500 from 2015-01-01 through 2023-12-31 using a result limit of 100 per page, following continuation tokens until the final page. How many records are in the complete collection?</question>
-    <answer>580</answer>
+    <answer>614</answer>
   </qa_pair>
   <qa_pair>
     <question>Using the bounding box west -84.31, south 39.16, east -84.28, north 39.17, find the Freshwater Explorer record for COMID 25243915 (request up to 25 records). What is its AvgPredEC rounded to one decimal place, and what evidence type does the server label this kind of result? Answer as "VALUE; evidence_type".</question>
