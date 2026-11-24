@@ -12,7 +12,7 @@
     <answer>17</answer>
   </qa_pair>
   <qa_pair>
-    <question>For WQP monitoring location USGS-03245500 (Little Miami River at Milford OH), which characteristic group has the largest reported result count in the WQP availability summary? Answer with the group name only.</question>
+    <question>For WQP monitoring location USGS-03245500 (Little Miami River at Milford OH), which characteristic group has the largest reported result count in the WQP availability summary (wqp_available_data, which reports WQX 2 summary counts)? Answer with the group name only.</question>
     <answer>Physical</answer>
   </qa_pair>
   <qa_pair>
